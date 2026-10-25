@@ -178,6 +178,24 @@ table.teams{border-collapse:collapse;width:100%;min-width:640px;font-size:.9rem}
 details.debrief{margin-top:6px}
 details.debrief summary{cursor:pointer;color:var(--un);font-weight:600;font-size:.86rem}
 details.debrief pre{white-space:pre-wrap;font-family:var(--sans);font-size:.84rem;background:var(--paper);border-radius:6px;padding:10px;max-height:340px;overflow:auto}
+.lockbanner{background:var(--ok-soft);color:var(--ink);border-radius:8px;padding:12px 16px;margin:0 0 20px;max-width:780px;font-weight:600}
+.submitbox{border:2px solid var(--un);border-radius:10px;padding:18px 20px;max-width:780px;background:var(--surface);margin-top:10px}
+.submitbox h2{margin-top:0}
+.pill.prog{background:var(--amber-soft);color:var(--amber)}
+.score{font-weight:700;font-variant-numeric:tabular-nums}
+.rater{margin-top:26px;border:2px solid var(--un);border-radius:10px;background:var(--surface);padding:18px 20px;max-width:980px}
+.rater h2{margin-top:0}
+.rsec{border-top:1px solid var(--line);padding:14px 0}
+.rsec h3{margin:0 0 6px;font-size:1.02rem}
+.rans{font-family:var(--serif);font-size:.98rem;line-height:1.55;margin:0 0 6px}
+.rans dt{font-family:var(--sans);font-weight:600;font-size:.84rem;color:var(--muted);margin-top:6px}
+.rans dd{margin:0;white-space:pre-wrap}
+.rnote{background:var(--amber-soft);border-radius:6px;padding:8px 12px;font-size:.88rem;margin:8px 0}
+.rrow{display:grid;grid-template-columns:200px 1fr;gap:10px;align-items:start;margin-top:8px}
+@media (max-width:640px){.rrow{grid-template-columns:1fr}}
+.rrow textarea{min-height:56px}
+.auto{display:inline-block;font-size:.84rem;font-weight:700;padding:2px 10px;border-radius:99px;background:var(--un-soft);color:var(--un);margin-left:6px}
+.tag-best{color:var(--ok);font-weight:700} .tag-acc{color:var(--amber);font-weight:700} .tag-other{color:var(--flash);font-weight:700}
 footer{max-width:1180px;margin:0 auto;padding:0 20px 30px;color:var(--muted);font-size:.82rem}
 footer p{margin:0 0 8px}
 .linkbtn{border:0;background:none;padding:0;color:var(--un);font-weight:600;text-decoration:underline;font-size:.84rem}
@@ -206,6 +224,7 @@ label.btn{display:inline-block}
 </header>
 
 <main>
+<div class="lockbanner" id="lockBanner" hidden></div>
 <section class="view" id="v-situation">
   <div class="teamline" id="teamLine">
     <div id="teamCreate">
@@ -280,6 +299,12 @@ label.btn{display:inline-block}
   <h1>Decision brief to the SRSG</h1>
   <p class="lede">The SRSG has ten minutes. Lead with what you need decided, then the risks. Reflect everything that changed during the exercise.</p>
   <div id="decisionFields"></div>
+  <div class="submitbox" id="submitBox">
+    <h2>Submit your final answers</h2>
+    <p class="small">Submit when your team has finished every stage. Your answers are locked once submitted; the facilitator can reopen them if needed.</p>
+    <button class="btn primary" id="submitBtn">Submit final answers</button>
+    <p class="teamerr" id="submitErr" role="alert"></p>
+  </div>
 </section>
 
 <section class="view" id="v-facilitator">
@@ -310,9 +335,17 @@ label.btn{display:inline-block}
   <div class="savebar" id="saveBar"><span id="saveState">All changes saved</span><button class="btn primary" id="saveCfg">Save messages</button></div>
 
   <h2>Teams</h2>
-  <p class="small">Answers update live as teams type.</p>
+  <p class="small" id="teamsSummary">Answers update live as teams type.</p>
   <div id="teams"></div>
-  <div class="row" style="margin-top:10px"><button class="btn" id="copyAll">Copy all debriefs</button><button class="btn danger" id="clearTeams">Clear team answers</button><span class="small" id="copyNote"></span></div>
+  <div class="row" style="margin-top:10px">
+    <button class="btn primary" id="exportPdf">Export results as PDF</button>
+    <label class="small"><input type="checkbox" id="pdfAnswers" checked> Include each team’s full answers</label>
+    <button class="btn" id="copyAll">Copy all debriefs</button>
+    <button class="btn danger" id="clearTeams">Clear team answers</button>
+    <span class="small" id="copyNote"></span>
+  </div>
+  <p class="small" style="max-width:75ch">Scores: written sections are rated by you from 0 to 5. Option choices are scored automatically (best option 5, acceptable option 3, other 0), using the best and acceptable options you set for each message. The allocation is scored automatically from the plan checks. Unrated sections are left out of the total until you rate them.</p>
+  <div id="rater"></div>
 </section>
 </main>
 
@@ -408,7 +441,7 @@ function frac(){return Math.min(1,elapsed()/(L().duration*60000));}
 
 /* ---------- Saving the team's work ---------- */
 var saveTimer=null,saving=false,again=false;
-function changed(){saveLocal();if(!db||!uid||!canSave||!ME.teamName)return;clearTimeout(saveTimer);saveTimer=setTimeout(pushTeam,2000);}
+function changed(){saveLocal();if(!db||!uid||!canSave||!ME.teamName||ME.submitted)return;clearTimeout(saveTimer);saveTimer=setTimeout(pushTeam,2000);}
 function pushTeam(){
   if(saving){again=true;return;}
   saving=true;
@@ -521,6 +554,7 @@ function renderMessages(){
       '<button class="btn" data-go-plan>Update allocation</button></div></article>';
   }
   $("msgList").innerHTML=html;
+  applyLock();
 }
 $("msgList").addEventListener("change",function(e){var t=e.target;if(t.type==="radio"){ME.coa[t.dataset.m]=+t.value;changed();}});
 $("msgList").addEventListener("click",function(e){if(e.target.closest("[data-go-plan]"))show("plan");});
@@ -618,6 +652,8 @@ function renderEditor(){
         '<div class="field"><label>Message text</label><textarea data-k="body" rows="5">'+esc(m.body)+'</textarea><span class="hint">Leave a blank line between paragraphs.</span></div>'+
         '<div class="field"><label>Question for teams</label><input type="text" data-k="question" value="'+esc(m.question)+'"></div>'+
         '<div class="field"><label>Options, one per line</label><textarea data-k="options" rows="3">'+esc(m.options)+'</textarea></div>'+
+        '<div class="ed-grid" style="grid-template-columns:1fr 1fr"><div class="field"><label>Best option (for scoring)</label><select data-k="best">'+letterOpts(m.best,"Not set")+'</select></div>'+
+        '<div class="field"><label>Also acceptable</label><select data-k="acceptable">'+letterOpts(m.acceptable,"None")+'</select></div></div>'+
         '<div class="field"><label>Facilitator notes (hidden from teams)</label><textarea data-k="notes" rows="3">'+esc(m.notes)+'</textarea></div></div>';
     }).join("");
   }
@@ -638,7 +674,7 @@ $("editor").addEventListener("click",function(e){
 });
 $("addMsg").addEventListener("click",function(){
   if(!DRAFT)DRAFT={messages:[]};
-  DRAFT.messages.push({id:newId(),title:"",from:"JOC UNMISA",prec:"FLASH",sendAt:"",body:"",question:"",options:"",notes:""});
+  DRAFT.messages.push({id:newId(),title:"",from:"JOC UNMISA",prec:"FLASH",sendAt:"",body:"",question:"",options:"",best:"",acceptable:"",notes:""});
   dirty=true;renderEditor();
   var cards=$("editor").querySelectorAll(".ed");var last=null;cards.forEach(function(c){if(+c.dataset.i===DRAFT.messages.length-1)last=c;});
   if(last){last.scrollIntoView({block:"center"});var inp=last.querySelector("input");if(inp)inp.focus();}
@@ -665,21 +701,228 @@ $("resetBtn").addEventListener("click",function(){
 /* ---------- Facilitator: teams ---------- */
 var profiles={};
 function renderTeams(){
-  if(!TEAMS.length){$("teams").innerHTML='<div class="empty">No team has saved anything yet.</div>';return;}
+  var subs=TEAMS.filter(function(t){return t.data.submitted;}).length;
+  $("teamsSummary").textContent=TEAMS.length?subs+" of "+TEAMS.length+" teams have submitted. Answers update live as teams type.":"Answers update live as teams type.";
+  if(!TEAMS.length){$("teams").innerHTML='<div class="empty">No team has saved anything yet.</div>';renderRater();return;}
   var sent=L().sent;
-  var h='<div class="teams-wrap"><table class="teams"><thead><tr><th>Team</th><th class="c">Assessment</th><th class="c">Plan</th>'+
-    sent.map(function(m,i){return '<th class="c" title="'+esc(m.title)+'">Msg '+(i+1)+'</th>';}).join("")+'<th class="c">Brief</th><th>Last update</th></tr></thead><tbody>';
+  var h='<div class="teams-wrap"><table class="teams"><thead><tr><th>Team</th><th>Status</th><th class="c">Assessment</th><th class="c">Plan</th>'+
+    sent.map(function(m,i){return '<th class="c" title="'+esc(m.title)+'">Msg '+(i+1)+'</th>';}).join("")+'<th class="c">Brief</th><th class="c">Score</th><th></th></tr></thead><tbody>';
   TEAMS.forEach(function(t){
-    var d=t.data,a=d.answers||{},p=profiles[t.id];
+    var d=t.data,a=d.answers||{},sc=scoreTeam(t);
     var filled=function(list){return list.filter(function(f){return (a[f.id]||"").trim();}).length+"/"+list.length;};
-    var who=(d.teamName||"Unnamed team")+(p&&p.name?" ("+p.name+")":"");
-    h+='<tr><td><b>'+esc(who)+'</b><details class="debrief"><summary>Read full debrief</summary><pre>'+esc(debriefFor(d,who))+'</pre></details></td>'+
+    var who=d.teamName||"Unnamed team";
+    var status=d.submitted?'<span class="pill sent">Submitted '+timeOf(d.submittedAt)+'</span>':'<span class="pill prog">In progress</span>';
+    h+='<tr><td><b>'+esc(who)+'</b><details class="debrief"><summary>Read full debrief</summary><pre>'+esc(debriefFor(d,who))+'</pre></details></td><td>'+status+'</td>'+
       '<td class="c">'+filled(ASSESS)+'</td><td class="c">'+filled(PLANF)+'</td>'+
       sent.map(function(m){var c=(d.coa||{})[m.id],w=(a["why_"+m.id]||"").trim();return '<td class="c">'+(c!=null?String.fromCharCode(65+c):(w?"✓":"–"))+'</td>';}).join("")+
-      '<td class="c">'+filled(DECF)+'</td><td class="small">'+(d.updatedAt?new Date(d.updatedAt).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}):"")+'</td></tr>';
+      '<td class="c">'+filled(DECF)+'</td><td class="c score">'+(sc.max?sc.pct+"%":"–")+(sc.unrated?'<div class="small">'+sc.unrated+' to rate</div>':"")+'</td>'+
+      '<td><div class="row"><button class="btn sm primary" data-rate="'+esc(t.id)+'">Rate</button>'+(d.submitted?'<button class="btn sm" data-reopen="'+esc(t.id)+'">Reopen</button>':"")+'</div></td></tr>';
   });
   $("teams").innerHTML=h+'</tbody></table></div>';
+  renderRater();
 }
+function timeOf(ts){return ts?new Date(ts).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}):"";}
+$("teams").addEventListener("click",function(e){
+  var r=e.target.closest("[data-rate]"),o=e.target.closest("[data-reopen]");
+  if(r){RATE_T=r.getAttribute("data-rate");renderRater();$("rater").scrollIntoView({behavior:"smooth",block:"start"});}
+  if(o){var id=o.getAttribute("data-reopen");if(confirm("Reopen this team’s answers so they can edit again?"))db.doc("teams/"+id).update({submitted:false}).catch(function(){alert("Couldn’t reopen. Try again.");});}
+});
+
+/* ---------- Scoring ---------- */
+var RATINGS={},RATE_T=null,ratingsTimer=null,ratingsDirty=false;
+var SCALE=[["","Not rated"],["0","0 · Not done"],["1","1 · Poor"],["2","2 · Weak"],["3","3 · Adequate"],["4","4 · Good"],["5","5 · Excellent"]];
+function letterOpts(v,none){return '<option value="">'+none+'</option>'+"ABCDEF".split("").map(function(l){return '<option'+(v===l?" selected":"")+'>'+l+'</option>';}).join("");}
+function cfgFor(m){return CFG&&(CFG.messages||[]).filter(function(c){return c.id===m.sourceId;})[0];}
+function allocScore(alloc){var p=0;checksFor(alloc||blankAlloc()).forEach(function(c){if(c[0]==="err")p+=2;else if(c[0]==="warn")p+=1;});return Math.max(0,5-p);}
+function optionResult(d,m){
+  var c=cfgFor(m),pick=(d.coa||{})[m.id];
+  if(!c||!c.best||!(m.options||[]).length)return null;
+  var L_=pick!=null?String.fromCharCode(65+pick):"";
+  if(!L_)return {letter:"none",kind:"other",score:0};
+  if(L_===c.best)return {letter:L_,kind:"best",score:5};
+  if(L_===c.acceptable)return {letter:L_,kind:"acc",score:3};
+  return {letter:L_,kind:"other",score:0};
+}
+function scoreParts(t){
+  var d=t.data,R=RATINGS[t.id]||{},sc=R.scores||{},parts=[];
+  function man(key,label){var v=sc[key];parts.push({key:key,label:label,auto:false,rated:v!==""&&v!=null,score:v===""||v==null?null:+v,max:5});}
+  man("assess","Situation assessment");
+  man("plan","Integrated plan: concept");
+  parts.push({key:"alloc",label:"Integrated plan: allocation (auto)",auto:true,rated:true,score:allocScore(d.alloc),max:5});
+  L().sent.forEach(function(m,i){
+    var o=optionResult(d,m);
+    if(o)parts.push({key:"opt_"+m.id,label:"Message "+(i+1)+": option chosen (auto)",auto:true,rated:true,score:o.score,max:5,opt:o});
+    man("msg_"+m.id,"Message "+(i+1)+": response");
+  });
+  man("decision","Decision brief");
+  return parts;
+}
+function scoreTeam(t){
+  var parts=scoreParts(t),tot=0,max=0,un=0;
+  parts.forEach(function(p){if(p.rated){tot+=p.score;max+=p.max;}else un++;});
+  return {parts:parts,total:tot,max:max,pct:max?Math.round(tot/max*100):0,unrated:un};
+}
+
+/* ---------- Rating panel ---------- */
+function rateRow(key,R){
+  var sc=(R.scores||{})[key],cm=(R.comments||{})[key]||"";
+  return '<div class="rrow"><select class="rate" data-key="'+key+'" aria-label="Score">'+SCALE.map(function(o){return '<option value="'+o[0]+'"'+(String(sc==null?"":sc)===o[0]?" selected":"")+'>'+o[1]+'</option>';}).join("")+'</select>'+
+    '<textarea class="ratec" data-key="'+key+'" placeholder="Comment for the report (optional)">'+esc(cm)+'</textarea></div>';
+}
+function ansList(list,a){return '<dl class="rans">'+list.map(function(f){return '<dt>'+esc(f.label)+'</dt><dd>'+esc(a[f.id]||"(blank)")+'</dd>';}).join("")+'</dl>';}
+function renderRater(){
+  var host=$("rater");
+  var t=TEAMS.filter(function(x){return x.id===RATE_T;})[0];
+  if(!t){host.innerHTML="";host.className="";return;}
+  host.className="rater";
+  var d=t.data,a=d.answers||{},R=RATINGS[t.id]||{},sc=scoreTeam(t);
+  if(host.contains(document.activeElement)&&host.dataset.team===t.id){$("raterTotal").textContent=totalText(sc);return;}
+  host.dataset.team=t.id;
+  var h='<div class="row" style="justify-content:space-between"><h2>Rating: '+esc(d.teamName||"Unnamed team")+'</h2><button class="btn sm" id="closeRater">Close</button></div>'+
+    '<p class="score" id="raterTotal">'+totalText(sc)+'</p><p class="small">'+(d.submitted?"Submitted at "+timeOf(d.submittedAt)+".":"Not submitted yet: answers may still change.")+' Ratings save automatically.</p>';
+  h+='<div class="rsec"><h3>Situation assessment</h3>'+ansList(ASSESS,a)+rateRow("assess",R)+'</div>';
+  var chk=checksFor(d.alloc||blankAlloc());
+  h+='<div class="rsec"><h3>Integrated plan</h3><dl class="rans"><dt>Allocation</dt><dd>'+REGIONS.map(function(r){var x=(d.alloc||{})[r.id]||{};return esc(r.name)+": "+ASSETS.filter(function(s){return x[s.id];}).map(function(s){return x[s.id]+" "+esc(s.name);}).join(", ")||esc(r.name)+": nothing";}).join("<br>")+'</dd>'+
+    '<dt>Plan checks</dt><dd>'+chk.map(function(c){return esc(c[1]+" "+c[2]);}).join("<br>")+'</dd></dl>'+
+    '<p>Allocation score (auto): <span class="auto">'+allocScore(d.alloc)+' / 5</span></p>'+ansList(PLANF,a)+'<p class="small">Rate the concept:</p>'+rateRow("plan",R)+'</div>';
+  L().sent.forEach(function(m,i){
+    var c=cfgFor(m),o=optionResult(d,m),pick=(d.coa||{})[m.id];
+    h+='<div class="rsec"><h3>Message '+(i+1)+': '+esc(m.title)+'</h3>';
+    if((m.options||[]).length){
+      h+='<p><b>Option chosen:</b> '+(pick!=null?String.fromCharCode(65+pick)+". "+esc(m.options[pick]||""):"none")+
+        (o?' <span class="'+(o.kind==="best"?"tag-best":o.kind==="acc"?"tag-acc":"tag-other")+'">'+(o.kind==="best"?"Best option":o.kind==="acc"?"Acceptable":"Not preferred")+'</span><span class="auto">'+o.score+' / 5</span>':' <span class="small">(set the best option in the message editor to score this)</span>')+'</p>';
+    }
+    if(c&&c.notes)h+='<div class="rnote"><b>Your notes:</b> '+esc(c.notes)+'</div>';
+    h+='<dl class="rans"><dt>Response</dt><dd>'+esc(a["why_"+m.id]||"(no response)")+'</dd></dl>'+rateRow("msg_"+m.id,R)+'</div>';
+  });
+  h+='<div class="rsec"><h3>Decision brief</h3>'+ansList(DECF,a)+rateRow("decision",R)+'</div>';
+  h+='<div class="rsec"><h3>Overall comment</h3><textarea class="ratec" data-key="overall" placeholder="Strengths, areas to improve, key learning points">'+esc((R.comments||{}).overall||"")+'</textarea></div>';
+  host.innerHTML=h;
+}
+function totalText(sc){return "Total: "+sc.total+" / "+sc.max+(sc.max?" ("+sc.pct+"%)":"")+(sc.unrated?" · "+sc.unrated+" section"+(sc.unrated>1?"s":"")+" not rated yet":"");}
+function rateEdit(t){
+  if(!RATE_T)return;
+  var R=RATINGS[RATE_T]=RATINGS[RATE_T]||{scores:{},comments:{}};R.scores=R.scores||{};R.comments=R.comments||{};
+  if(t.classList.contains("rate"))R.scores[t.dataset.key]=t.value;else R.comments[t.dataset.key]=t.value;
+  ratingsDirty=true;clearTimeout(ratingsTimer);ratingsTimer=setTimeout(saveRatings,1000);
+  var team=TEAMS.filter(function(x){return x.id===RATE_T;})[0];if(team)$("raterTotal").textContent=totalText(scoreTeam(team));
+  if(t.classList.contains("rate"))renderTeams();
+}
+function saveRatings(){
+  db.doc("fac/ratings").set(clone(RATINGS)).then(function(){ratingsDirty=false;},function(){setStatus("Couldn’t save ratings. Check your connection.",true);});
+}
+$("rater").addEventListener("change",function(e){if(e.target.classList.contains("rate"))rateEdit(e.target);});
+$("rater").addEventListener("input",function(e){if(e.target.classList.contains("ratec"))rateEdit(e.target);});
+$("rater").addEventListener("click",function(e){if(e.target.id==="closeRater"){RATE_T=null;renderRater();}});
+
+
+/* ---------- PDF export ---------- */
+function loadScript(src){return new Promise(function(res,rej){var x=document.createElement("script");x.src=src;x.onload=res;x.onerror=rej;document.head.appendChild(x);});}
+function ensurePdf(){
+  if(window.pdfMake&&window.pdfMake.vfs)return Promise.resolve();
+  return loadScript("https://cdn.jsdelivr.net/npm/pdfmake@0.2.15/build/pdfmake.min.js").then(function(){return loadScript("https://cdn.jsdelivr.net/npm/pdfmake@0.2.15/build/vfs_fonts.js");});
+}
+$("exportPdf").addEventListener("click",function(){
+  var btn=$("exportPdf");
+  if(!TEAMS.length){alert("There are no team results to export yet.");return;}
+  var pending=TEAMS.filter(function(t){return !t.data.submitted;}).length;
+  if(pending&&!confirm(pending+" team"+(pending>1?"s have":" has")+" not submitted yet. Export the current results anyway?"))return;
+  btn.disabled=true;btn.textContent="Preparing PDF…";
+  ensurePdf().then(function(){
+    var dd=buildReport($("pdfAnswers").checked);
+    var d=new Date(),stamp=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+    window.pdfMake.createPdf(dd).download("sarevia-results-"+stamp+".pdf");
+  }).catch(function(){alert("Couldn’t create the PDF. Check your internet connection and try again.");})
+  .then(function(){btn.disabled=false;btn.textContent="Export results as PDF";});
+});
+function buildReport(withAnswers){
+  var BLUE="#2C6DB5",MUTED="#56657A",LINE="#C9D1DB";
+  var ranked=TEAMS.map(function(t){return {t:t,sc:scoreTeam(t)};}).sort(function(a,b){return b.sc.pct-a.sc.pct||b.sc.total-a.sc.total;});
+  var sent=L().sent,now=new Date();
+  function txt(v){return String(v==null||v===""?"—":v);}
+  function hdr(cells){return cells.map(function(c){return {text:c,style:"th"};});}
+  var tableLayout={hLineWidth:function(){return .5;},vLineWidth:function(){return 0;},hLineColor:function(){return LINE;},paddingTop:function(){return 4;},paddingBottom:function(){return 4;},fillColor:function(i){return i===0?"#EEF3FA":null;}};
+  var content=[];
+  content.push({text:"Exercise SAREVIA",style:"kicker"});
+  content.push({text:"Results report",style:"title"});
+  content.push({text:now.toLocaleDateString([], {day:"numeric",month:"long",year:"numeric"})+" · "+TEAMS.length+" teams · "+TEAMS.filter(function(t){return t.data.submitted;}).length+" submitted · "+L().duration+"-minute exercise",style:"meta"});
+  content.push({text:"How scores work",style:"h2"});
+  content.push({text:"Written sections are rated by the facilitator from 0 (not done) to 5 (excellent). Option choices are scored automatically: the best option earns 5, an acceptable option 3, any other choice 0. The asset allocation is scored automatically from the plan checks, starting at 5 and losing 2 points per error and 1 per warning. The percentage uses rated sections only.",style:"p"});
+  content.push({text:"Ranking",style:"h2"});
+  var rb=[hdr(["#","Team","Status","Points","Score","Not rated"])];
+  ranked.forEach(function(r,i){var d=r.t.data;rb.push([String(i+1),{text:d.teamName||"Unnamed team",bold:true},d.submitted?"Submitted "+timeOf(d.submittedAt):"Not submitted",r.sc.total+" / "+r.sc.max,{text:r.sc.max?r.sc.pct+"%":"—",bold:true},r.sc.unrated?String(r.sc.unrated):"0"]);});
+  content.push({table:{headerRows:1,widths:[18,"*",95,55,45,45],body:rb},layout:tableLayout,fontSize:9.5});
+  if(sent.length){
+    content.push({text:"Messages sent",style:"h2"});
+    var mb=[hdr(["#","Message","Sent at","Best","Acceptable"])];
+    sent.forEach(function(m,i){var c=cfgFor(m)||{};mb.push([String(i+1),m.title,"Minute "+(m.sentAtMin||0),txt(c.best),txt(c.acceptable)]);});
+    content.push({table:{headerRows:1,widths:[18,"*",60,40,60],body:mb},layout:tableLayout,fontSize:9.5});
+  }
+  ranked.forEach(function(r,i){
+    var t=r.t,d=t.data,a=d.answers||{},R=RATINGS[t.id]||{},cm=R.comments||{};
+    content.push({text:(i+1)+". "+(d.teamName||"Unnamed team"),style:"h1",pageBreak:"before"});
+    content.push({text:"Score "+(r.sc.max?r.sc.pct+"%":"—")+" ("+r.sc.total+" of "+r.sc.max+" points)"+(r.sc.unrated?" · "+r.sc.unrated+" section(s) not rated":"")+" · "+(d.submitted?"Submitted at "+timeOf(d.submittedAt):"Not submitted"),style:"meta"});
+    var sb=[hdr(["Section","Score","Facilitator comment"])];
+    r.sc.parts.forEach(function(p){sb.push([p.label,p.rated?p.score+" / "+p.max:"Not rated",p.auto?(p.opt?"Chose "+p.opt.letter+(p.opt.kind==="best"?" (best option)":p.opt.kind==="acc"?" (acceptable)":" (not preferred)"):"Calculated from plan checks"):txt(cm[p.key])]);});
+    content.push({table:{headerRows:1,widths:[150,50,"*"],body:sb},layout:tableLayout,fontSize:9.5});
+    if(cm.overall){content.push({text:"Overall comment",style:"h3"});content.push({text:cm.overall,style:"p"});}
+    if(!withAnswers)return;
+    function block(title,list){content.push({text:title,style:"h3"});list.forEach(function(f){content.push({text:f.label,style:"label"});content.push({text:txt(a[f.id]),style:"ans"});});}
+    block("Situation assessment",ASSESS);
+    content.push({text:"Asset allocation",style:"h3"});
+    var ab=[hdr(["Region"].concat(ASSETS.map(function(x){return x.name;})))];
+    REGIONS.forEach(function(rg){var x=(d.alloc||{})[rg.id]||{};ab.push([rg.name].concat(ASSETS.map(function(s){return String(x[s.id]||0);})));});
+    content.push({table:{headerRows:1,widths:[80].concat(ASSETS.map(function(){return "*";})),body:ab},layout:tableLayout,fontSize:8});
+    checksFor(d.alloc||blankAlloc()).forEach(function(c){content.push({text:c[1]+" "+c[2],style:"small"});});
+    block("Concept by line of effort",PLANF);
+    sent.forEach(function(m,k){
+      var pick=(d.coa||{})[m.id];
+      content.push({text:"Message "+(k+1)+": "+m.title,style:"h3"});
+      if((m.options||[]).length)content.push({text:[{text:"Option chosen: ",bold:true},pick!=null?String.fromCharCode(65+pick)+". "+(m.options[pick]||""):"none"],style:"ans"});
+      content.push({text:"Response",style:"label"});content.push({text:txt(a["why_"+m.id]),style:"ans"});
+    });
+    block("Decision brief",DECF);
+  });
+  return {
+    pageSize:"A4",pageMargins:[48,56,48,56],
+    info:{title:"Exercise SAREVIA results"},
+    footer:function(cp,pc){return {columns:[{text:"Exercise SAREVIA · fictional training scenario",color:MUTED,fontSize:8},{text:cp+" / "+pc,alignment:"right",color:MUTED,fontSize:8}],margin:[48,20,48,0]};},
+    content:content,
+    defaultStyle:{fontSize:10,lineHeight:1.25,color:"#14243A"},
+    styles:{
+      kicker:{fontSize:10,bold:true,color:BLUE},
+      title:{fontSize:24,bold:true,margin:[0,2,0,4]},
+      meta:{fontSize:9.5,color:MUTED,margin:[0,0,0,12]},
+      h1:{fontSize:18,bold:true,color:BLUE,margin:[0,0,0,4]},
+      h2:{fontSize:13,bold:true,margin:[0,16,0,6]},
+      h3:{fontSize:11,bold:true,color:BLUE,margin:[0,14,0,4]},
+      th:{bold:true,fontSize:9,color:"#14243A"},
+      label:{fontSize:8.5,bold:true,color:MUTED,margin:[0,6,0,1]},
+      ans:{fontSize:10,margin:[0,0,0,2]},
+      p:{fontSize:10,margin:[0,0,0,6]},
+      small:{fontSize:8.5,color:MUTED}
+    }
+  };
+}
+
+/* ---------- Submit and lock (participants) ---------- */
+function applyLock(){
+  var lock=!!ME.submitted&&!isFac;
+  document.querySelectorAll(".ans,.cell,#msgList input[type=radio]").forEach(function(el){el.disabled=lock;});
+  document.querySelectorAll("[data-go-plan]").forEach(function(el){el.hidden=lock;});
+  $("lockBanner").hidden=!lock;
+  if(lock)$("lockBanner").textContent="Your team submitted its final answers at "+timeOf(ME.submittedAt)+". They are locked; ask the facilitator if you need to change something.";
+  $("submitBox").hidden=isFac||lock;
+}
+$("submitBtn").addEventListener("click",function(){
+  var err=$("submitErr");err.textContent="";
+  if(!ME.teamName){err.textContent="Create your team on the Situation tab first.";return;}
+  if(!db||!uid||!canSave){err.textContent="Not connected, so your answers can’t be submitted. Reload the page and try again.";return;}
+  var blanks=ASSESS.concat(PLANF,DECF).filter(function(f){return !(ME.answers[f.id]||"").trim();}).length;
+  if(!confirm((blanks?blanks+" written answer"+(blanks>1?"s are":" is")+" still blank. ":"")+"Submit your final answers now? You won’t be able to edit them afterwards."))return;
+  ME.submitted=true;ME.submittedAt=Date.now();saveLocal();clearTimeout(saveTimer);pushTeam();applyLock();onLive();
+});
+
 function debriefFor(d,who){
   var a=d.answers||{},Lines=[];
   Lines.push("TEAM: "+who);Lines.push("");
@@ -715,7 +958,8 @@ function onLive(){
   tick();renderTrack();renderMessages();checkNew();
   if(isFac){renderDur();if(!$("editor").contains(document.activeElement))renderEditor();if(TEAMS.length)renderTeams();}
   var l=L();
-  if(!isFac&&!ME.teamName)setStatus("Start by creating your team at the top of the Situation tab. Your answers are saved once your team exists.",true);
+  if(!isFac&&ME.submitted)setStatus("Answers submitted. Thank you.");
+  else if(!isFac&&!ME.teamName)setStatus("Start by creating your team at the top of the Situation tab. Your answers are saved once your team exists.",true);
   else if(!isFac)setStatus(l.status==="idle"?"Waiting for the facilitator to start. Read the situation brief in the meantime.":l.status==="paused"?"The facilitator has paused the exercise.":"Exercise running. Your answers save automatically.");
   else setStatus(l.status==="idle"?"You are the facilitator. Prepare your messages, then start the exercise.":l.status==="paused"?"Paused. Teams see the clock stopped.":"Running. Keep this page open so scheduled messages go out.");
 }
@@ -723,7 +967,7 @@ function onLive(){
 /* ---------- Boot ---------- */
 function renderAll(){
   renderTeamLine();
-  renderMap();renderFields("assessFields",ASSESS);renderFields("planFields",PLANF);renderFields("decisionFields",DECF);renderBoard();renderMessages();tick();
+  renderMap();renderFields("assessFields",ASSESS);renderFields("planFields",PLANF);renderFields("decisionFields",DECF);renderBoard();renderMessages();tick();applyLock();
 }
 loadLocal();renderAll();show(location.hash.slice(1)||"situation");
 
@@ -778,7 +1022,7 @@ $("importFile").addEventListener("change",function(e){
     if(!Array.isArray(list))throw new Error("no messages");
     var clean=list.map(function(m){return {id:newId(),title:String(m.title||""),from:String(m.from||""),prec:PRECS.indexOf(m.prec)>=0?m.prec:"FLASH",
       sendAt:m.sendAt==null?"":String(m.sendAt),body:String(m.body||""),question:String(m.question||""),
-      options:Array.isArray(m.options)?m.options.join("\n"):String(m.options||""),notes:String(m.notes||"")};});
+      options:Array.isArray(m.options)?m.options.join("\n"):String(m.options||""),best:/^[A-F]$/.test(m.best||"")?m.best:"",acceptable:/^[A-F]$/.test(m.acceptable||"")?m.acceptable:"",notes:String(m.notes||"")};});
     var replace=!DRAFT.messages.length||confirm("Replace your current messages with the "+clean.length+" imported ones? Choose Cancel to add them instead.");
     DRAFT.messages=replace?clean:DRAFT.messages.concat(clean);
     dirty=true;renderEditor();
@@ -855,6 +1099,11 @@ var booted=false;
       }catch(e){}
     }
     if(isFac)$("teamLine").hidden=true;
+    else db.doc("teams/"+uid).onSnapshot(function(s){
+      if(!s.exists||saving||again)return;var sub=!!s.data().submitted;
+      if(sub!==!!ME.submitted){ME.submitted=sub;if(!sub)ME.submittedAt=null;saveLocal();applyLock();onLive();}
+    });
+    applyLock();
     db.doc("live/state").onSnapshot(function(s){LIVE=s.exists?s.data():null;onLive();},function(){setStatus("Lost the live connection. Reload the page.",true);});
     if(isFac){
       db.doc("fac/config").onSnapshot(function(s){
@@ -862,6 +1111,7 @@ var booted=false;
         if(!dirty){DRAFT=clone(CFG);delete DRAFT.updatedAt;if(!DRAFT.messages)DRAFT.messages=[];renderEditor();}
       });
       db.collection("teams").onSnapshot(function(q){TEAMS=q.docs.map(function(d){return {id:d.id,data:d.data()};});renderTeams();});
+      db.doc("fac/ratings").onSnapshot(function(s){if(!ratingsDirty){RATINGS=s.exists?clone(s.data()):{};renderTeams();}});
       renderDur();
     }
     renderTrack();onLive();
