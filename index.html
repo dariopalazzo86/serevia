@@ -330,7 +330,7 @@ label.btn{display:inline-block}
 
 <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="flashTitle"><div class="flash" id="flashBox"></div></div>
 
-<script src="firebase-config.js"></script>
+<script src="firebase-config.js" onload="window.__cfgLoaded=true"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -825,7 +825,10 @@ function makeDb(fs){
 var booted=false;
 (function(){
   var C=window.FIREBASE_CONFIG;
-  if(!C||!C.apiKey||/PASTE/.test(C.apiKey)){setStatus("Setup needed: add your Firebase project settings to firebase-config.js. See the README.",true);return;}
+  // Also accept the block exactly as Firebase shows it: const firebaseConfig = {...}
+  if(!C){try{/* global firebaseConfig */C=(typeof firebaseConfig!=="undefined")?firebaseConfig:null;}catch(e){C=null;}}
+  if(!window.__cfgLoaded&&!C){setStatus("Setup needed: firebase-config.js was not found or has an error. Put it in the same folder as index.html, and check it contains only the settings block (no “import” lines).",true);return;}
+  if(!C||!C.apiKey||/PASTE/.test(C.apiKey)){setStatus("Setup needed: firebase-config.js still has the placeholder values. Replace them with your Firebase project settings (README, step 4).",true);return;}
   var app=initializeApp(C);
   AUTH=getAuth(app);
   var fs=initializeFirestore(app,{ignoreUndefinedProperties:true});
