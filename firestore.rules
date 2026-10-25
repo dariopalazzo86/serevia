@@ -11,34 +11,33 @@ service cloud.firestore {
         ];
     }
 
-    // Clock and sent messages: everyone in the exercise reads, facilitators write.
+    // A team member is signed in with the login the facilitator created for that team.
+    function isTeamMember(teamId) {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/roster/$(teamId))
+        && get(/databases/$(database)/documents/roster/$(teamId)).data.uid == request.auth.uid;
+    }
+
+    // Clock and sent messages: everyone signed in reads, facilitators write.
     match /live/state {
       allow read: if request.auth != null;
       allow write: if isFacilitator();
     }
 
-    // Message drafts, schedule and facilitator notes: facilitators only.
+    // Message drafts, schedule, notes, team passwords and ratings: facilitators only.
     match /fac/{docId} {
       allow read, write: if isFacilitator();
     }
 
-    // Team name register: anyone can check whether one name is taken, nobody can
-    // take over a name that exists, and only facilitators can list all names.
-    match /teamNames/{nameKey} {
-      allow get: if request.auth != null;
-      allow list: if isFacilitator();
-      allow create: if request.auth != null
-        && request.resource.data.uid == request.auth.uid
-        && request.resource.data.name is string
-        && request.resource.data.name.size() <= 40;
-      allow delete: if request.auth != null
-        && (resource.data.uid == request.auth.uid || isFacilitator());
+    // Team list: a team login can read only its own entry; facilitators manage all.
+    match /roster/{teamId} {
+      allow get: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow read, write: if isFacilitator();
     }
 
-    // Each team reads and writes only its own answers; facilitators read and clear all.
+    // Answers: shared by all members of the team; facilitators read, reopen and clear.
     match /teams/{teamId} {
-      allow read, write: if request.auth != null
-        && (request.auth.uid == teamId || isFacilitator());
+      allow read, write: if isFacilitator() || isTeamMember(teamId);
     }
   }
 }

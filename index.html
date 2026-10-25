@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Exercise SAREVIA — Integrated Mission Planning</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#2C6DB5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SAREVIA">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
@@ -178,6 +186,16 @@ table.teams{border-collapse:collapse;width:100%;min-width:640px;font-size:.9rem}
 details.debrief{margin-top:6px}
 details.debrief summary{cursor:pointer;color:var(--un);font-weight:600;font-size:.86rem}
 details.debrief pre{white-space:pre-wrap;font-family:var(--sans);font-size:.84rem;background:var(--paper);border-radius:6px;padding:10px;max-height:340px;overflow:auto}
+.gate{max-width:440px;margin:40px auto;background:var(--surface);border:1px solid var(--line);border-top:8px solid var(--un);border-radius:10px;padding:24px 26px}
+.gate h1{font-size:1.7rem}
+.gate .field{max-width:none}
+.gate input{width:100%;border:1px solid var(--line);background:var(--paper);border-radius:6px;padding:10px 12px;font-size:1.05rem}
+.logins-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:10px 0}
+table.logins{border-collapse:collapse;width:100%;min-width:620px;font-size:.92rem}
+.logins th,.logins td{padding:7px 12px;border-bottom:1px solid var(--line);text-align:left}
+.logins th{color:var(--muted);font-weight:600}
+.logins td.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.95rem;letter-spacing:.02em}
+.logins input{width:100%;min-width:140px;border:1px solid var(--line);border-radius:5px;padding:5px 8px;background:var(--paper)}
 .lockbanner{background:var(--ok-soft);color:var(--ink);border-radius:8px;padding:12px 16px;margin:0 0 20px;max-width:780px;font-weight:600}
 .submitbox{border:2px solid var(--un);border-radius:10px;padding:18px 20px;max-width:780px;background:var(--surface);margin-top:10px}
 .submitbox h2{margin-top:0}
@@ -225,16 +243,20 @@ label.btn{display:inline-block}
 
 <main>
 <div class="lockbanner" id="lockBanner" hidden></div>
-<section class="view" id="v-situation">
-  <div class="teamline" id="teamLine">
-    <div id="teamCreate">
-      <div class="field"><label for="teamName">Team name</label><span class="hint" id="teamHint">Create your team before you start. Each team needs a different name.</span><input type="text" id="teamName" maxlength="40" placeholder="e.g. Team Blue" autocomplete="off"></div>
-      <button class="btn primary" id="createTeam">Create team</button>
-      <button class="btn" id="cancelRename" hidden>Cancel</button>
-      <p class="teamerr" id="teamErr" role="alert"></p>
-    </div>
-    <div id="teamDone" hidden><span class="small">Your team</span><b id="teamShown"></b><button class="btn sm" id="renameTeam">Rename</button></div>
+<section class="view" id="v-login">
+  <div class="gate">
+    <h1>Exercise SAREVIA</h1>
+    <p class="lede" style="margin-bottom:16px">Sign in with the team login and password from your facilitator. Everyone in your team can use the same login on their own device.</p>
+    <form id="gateForm" novalidate>
+      <div class="field"><label for="gLogin">Team login</label><input type="text" id="gLogin" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required></div>
+      <div class="field"><label for="gPass">Password</label><input type="password" id="gPass" autocomplete="current-password" required></div>
+      <p class="teamerr" id="gErr" role="alert"></p>
+      <button class="btn primary" id="gGo" type="submit" style="width:100%;padding:11px">Sign in</button>
+    </form>
+    <p class="small" style="margin:14px 0 0">Facilitators: enter your email address as the login.</p>
   </div>
+</section>
+<section class="view" id="v-situation">
   <h1>Republic of Sarevia: situation brief</h1>
   <p class="lede">Read this brief as a team. Click a region on the map for its details. Everything in this exercise is fictional.</p>
   <div class="grid2">
@@ -328,6 +350,22 @@ label.btn{display:inline-block}
     </div>
   </div>
 
+  <h2>Team logins</h2>
+  <p class="small" style="max-width:75ch">Create one login per team, then give each team its login and password. All members of a team can sign in with it on their own devices; they share the same answers, which update live on every device.</p>
+  <div class="row" style="align-items:end">
+    <div class="field" style="margin:0;max-width:130px"><label for="nTeams">Teams to add</label><input type="number" id="nTeams" min="1" max="30" value="4"></div>
+    <div class="field" style="margin:0;max-width:200px"><label for="teamPrefix">Name them</label><input type="text" id="teamPrefix" value="Group" maxlength="24"></div>
+    <button class="btn primary" id="makeTeams">Create team logins</button>
+  </div>
+  <div id="logins"></div>
+  <div class="row">
+    <button class="btn" id="cardsPdf">Download login cards (PDF)</button>
+    <button class="btn" id="copyLogins">Copy login list</button>
+    <button class="btn" id="newPwAll">New passwords for all</button>
+    <button class="btn danger" id="delAll">Delete all team logins</button>
+    <span class="small" id="loginNote" role="status"></span>
+  </div>
+
   <h2>Messages</h2>
   <p class="small" style="max-width:70ch">Write the text participants will receive and set the minute it goes out (counted from the start). Leave the minute empty to send it only by hand. Options are one per line; leave them empty for a free-text response. Facilitator notes are never shown to participants.</p>
   <div id="editor"></div>
@@ -349,24 +387,14 @@ label.btn{display:inline-block}
 </section>
 </main>
 
-<footer><p>Exercise SAREVIA is a fictional training scenario. Countries, groups, resolutions and events are invented for instruction and do not represent real UN decisions.</p><button class="linkbtn" id="facBtn" hidden>Facilitator sign-in</button></footer>
-
-<div class="overlay" id="loginOv" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
-  <form class="flash blue login" id="loginForm">
-    <h2 id="loginTitle">Facilitator sign-in</h2>
-    <div class="field"><label for="lgEmail">Email</label><input type="email" id="lgEmail" autocomplete="username" required></div>
-    <div class="field"><label for="lgPass">Password</label><input type="password" id="lgPass" autocomplete="current-password" required></div>
-    <p class="small" id="lgErr" role="alert"></p>
-    <div class="row"><button class="btn primary" type="submit" id="lgGo">Sign in</button><button class="btn" type="button" id="lgCancel">Cancel</button></div>
-  </form>
-</div>
+<footer><p>Exercise SAREVIA is a fictional training scenario. Countries, groups, resolutions and events are invented for instruction and do not represent real UN decisions.</p><button class="linkbtn" id="signOutBtn" hidden>Sign out</button></footer>
 
 <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="flashTitle"><div class="flash" id="flashBox"></div></div>
 
 <script src="firebase-config.js" onload="window.__cfgLoaded=true"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, initializeAuth, inMemoryPersistence, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updatePassword, deleteUser, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { initializeFirestore, doc as fDoc, collection as fCollection, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 (function(){
@@ -424,40 +452,81 @@ function setStatus(t,alert){var s=$("status");s.textContent=t;s.classList.toggle
 function newId(){return "m"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 
 /* ---------- State ---------- */
-var db=null,uid=null,isFac=false,canSave=true,AUTH=null,AUTHUSER=null;
+var db=null,uid=null,isFac=false,canSave=true,AUTH=null,AUTHUSER=null,TEAMID=null,SIGNED=false,CONF=null,DOMAIN="";
 var LIVE=null;            // live/state: clock + sent messages (all viewers read)
 var CFG=null,DRAFT=null,dirty=false; // fac/config (facilitators only)
 var TEAMS=[];             // teams/* (facilitators only)
 var ME={teamName:"",answers:{},coa:{},alloc:blankAlloc(),acks:[]};
 var LOCAL_KEY="sarevia-live-v2";
 function blankAlloc(){var a={};REGIONS.forEach(function(r){a[r.id]={};ASSETS.forEach(function(x){a[r.id][x.id]=0;});});return a;}
-function loadLocal(){try{var r=localStorage.getItem(LOCAL_KEY);if(r){var o=JSON.parse(r);if(o&&o.alloc)ME=Object.assign(ME,o);}}catch(e){}}
-function saveLocal(){try{localStorage.setItem(LOCAL_KEY,JSON.stringify(ME));}catch(e){}}
+// Answers live on the server and are shared by the team; this device only remembers which messages it has acknowledged.
+function loadLocal(){if(!TEAMID)return;try{var r=localStorage.getItem(LOCAL_KEY+":"+TEAMID);if(r){var o=JSON.parse(r);if(o&&Array.isArray(o.acks))ME.acks=o.acks;}}catch(e){}}
+function saveLocal(){if(!TEAMID)return;try{localStorage.setItem(LOCAL_KEY+":"+TEAMID,JSON.stringify({acks:ME.acks}));}catch(e){}}
 
 function liveDefaults(){return {status:"idle",duration:75,extra:0,startedAt:0,elapsedBefore:0,sent:[]};}
 function L(){return LIVE||liveDefaults();}
 function elapsed(){var l=L();return (l.elapsedBefore||0)+(l.status==="running"?Math.max(0,Date.now()-l.startedAt):0);}
 function frac(){return Math.min(1,elapsed()/(L().duration*60000));}
 
-/* ---------- Saving the team's work ---------- */
-var saveTimer=null,saving=false,again=false;
-function changed(){saveLocal();if(!db||!uid||!canSave||!ME.teamName||ME.submitted)return;clearTimeout(saveTimer);saveTimer=setTimeout(pushTeam,2000);}
+/* ---------- Saving the team's work (field by field, so team members don't overwrite each other) ---------- */
+var saveTimer=null,saving=false,again=false,PEND={},INFLIGHT={};
+function pkey(path){return path.join("\u0001");}
+function changed(path){
+  if(path)PEND[pkey(path)]=path;
+  if(!db||!TEAMID||!canSave||ME.submitted)return;
+  clearTimeout(saveTimer);saveTimer=setTimeout(pushTeam,1500);
+}
+function getPath(o,path){for(var i=0;i<path.length;i++){if(o==null)return undefined;o=o[path[i]];}return o;}
 function pushTeam(){
+  if(!db||!TEAMID)return;
   if(saving){again=true;return;}
-  saving=true;
-  var body=clone(ME);body.updatedAt=Date.now();
-  db.doc("teams/"+uid).set(body).then(function(){
-    saving=false;if(again){again=false;pushTeam();}
-  },function(e){
-    saving=false;
-    canSave=false;setStatus("Your answers couldn’t be saved online and are kept on this device only. Reload the page; if this continues, tell the facilitator.",true);
+  var keys=Object.keys(PEND);if(!keys.length)return;
+  saving=true;INFLIGHT=PEND;PEND={};
+  var body={updatedAt:Date.now(),teamName:ME.teamName||""};
+  keys.forEach(function(k){var path=INFLIGHT[k],o=body;
+    for(var i=0;i<path.length-1;i++){o[path[i]]=o[path[i]]||{};o=o[path[i]];}
+    var v=getPath(ME,path);o[path[path.length-1]]=v===undefined?null:v;});
+  db.doc("teams/"+TEAMID).merge(body).then(function(){
+    saving=false;INFLIGHT={};
+    if(again||Object.keys(PEND).length){again=false;pushTeam();}
+  },function(){
+    saving=false;Object.keys(INFLIGHT).forEach(function(k){if(!PEND[k])PEND[k]=INFLIGHT[k];});INFLIGHT={};
+    setStatus("Your latest changes couldn’t be saved. Check your connection; they will be retried.",true);
+    clearTimeout(saveTimer);saveTimer=setTimeout(pushTeam,5000);
   });
+}
+function busy(path){var k=pkey(path);return !!(PEND[k]||INFLIGHT[k]);}
+function applyRemote(d){
+  if(!d)return;
+  var A=d.answers||{};
+  Object.keys(A).forEach(function(k){
+    var v=A[k]==null?"":String(A[k]);
+    if(busy(["answers",k])||ME.answers[k]===v)return;
+    ME.answers[k]=v;var el=$(k);
+    if(el&&el!==document.activeElement){el.value=v;var c=$(k+"_c");if(c&&el.dataset.max){c.textContent=v.length+" / "+el.dataset.max;c.classList.toggle("over",v.length>+el.dataset.max);}}
+  });
+  var AL=d.alloc||{},allocChanged=false;
+  Object.keys(AL).forEach(function(r){if(!ME.alloc[r])return;Object.keys(AL[r]||{}).forEach(function(a){
+    var v=+AL[r][a]||0;if(busy(["alloc",r,a])||ME.alloc[r][a]===v)return;
+    ME.alloc[r][a]=v;allocChanged=true;
+    var el=document.querySelector('.cell[data-r="'+r+'"][data-a="'+a+'"]');if(el&&el!==document.activeElement)el.value=v;
+  });});
+  if(allocChanged)updateTotals();
+  var CO=d.coa||{};
+  Object.keys(CO).forEach(function(m){
+    var v=CO[m];if(busy(["coa",m])||ME.coa[m]===v)return;
+    ME.coa[m]=v;var el=document.querySelector('input[name="coa_'+m+'"][value="'+v+'"]');if(el)el.checked=true;
+  });
+  if(!!d.submitted!==!!ME.submitted&&!busy(["submitted"])){
+    ME.submitted=!!d.submitted;ME.submittedAt=d.submittedAt||null;applyLock();onLive();
+  }
 }
 
 /* ---------- Navigation ---------- */
-var VIEWS=["situation","assess","plan","messages","decision","facilitator"],current="situation";
+var VIEWS=["login","situation","assess","plan","messages","decision","facilitator"],current="login";
 function show(id){
-  if(VIEWS.indexOf(id)<0||(id==="facilitator"&&!isFac))id="situation";
+  if(!SIGNED)id="login";
+  else if(VIEWS.indexOf(id)<0||id==="login"||(id==="facilitator"&&!isFac))id="situation";
   current=id;
   VIEWS.forEach(function(v){$("v-"+v).classList.toggle("on",v===id);});
   renderTrack();
@@ -467,6 +536,7 @@ function show(id){
 window.addEventListener("hashchange",function(){var h=location.hash.slice(1);if(h&&h!==current)show(h);});
 function unseenCount(){return L().sent.filter(function(m){return ME.acks.indexOf(m.id)<0;}).length;}
 function renderTrack(){
+  if(!SIGNED){$("track").innerHTML="";return;}
   var f=frac(),started=L().status!=="idle",now=0;
   STAGES.forEach(function(s,i){if(started&&f>=s.from)now=i;});
   var u=unseenCount();
@@ -504,10 +574,10 @@ function renderFields(host,list){
 document.addEventListener("input",function(e){
   var t=e.target;
   if(t.classList.contains("ans")){
-    ME.answers[t.id]=t.value;changed();
+    ME.answers[t.id]=t.value;changed(["answers",t.id]);
     var c=$(t.id+"_c");if(c){c.textContent=t.value.length+" / "+t.dataset.max;c.classList.toggle("over",t.value.length>+t.dataset.max);}
   } else if(t.classList.contains("cell")){
-    var n=parseInt(t.value,10);ME.alloc[t.dataset.r][t.dataset.a]=isNaN(n)||n<0?0:n;changed();updateTotals();
+    var n=parseInt(t.value,10);ME.alloc[t.dataset.r][t.dataset.a]=isNaN(n)||n<0?0:n;changed(["alloc",t.dataset.r,t.dataset.a]);updateTotals();
   } else if(t.closest&&t.closest("#editor")){editorInput(t);}
 });
 
@@ -556,7 +626,7 @@ function renderMessages(){
   $("msgList").innerHTML=html;
   applyLock();
 }
-$("msgList").addEventListener("change",function(e){var t=e.target;if(t.type==="radio"){ME.coa[t.dataset.m]=+t.value;changed();}});
+$("msgList").addEventListener("change",function(e){var t=e.target;if(t.type==="radio"){ME.coa[t.dataset.m]=+t.value;changed(["coa",t.dataset.m]);}});
 $("msgList").addEventListener("click",function(e){if(e.target.closest("[data-go-plan]"))show("plan");});
 
 var queue=[],showing=null;
@@ -576,7 +646,7 @@ function nextFlash(){
 }
 $("overlay").addEventListener("click",function(e){
   if(e.target.id!=="ackGo"&&e.target.id!=="ackLater")return;
-  if(showing&&ME.acks.indexOf(showing)<0){ME.acks.push(showing);changed();}
+  if(showing&&ME.acks.indexOf(showing)<0){ME.acks.push(showing);saveLocal();}
   var go=e.target.id==="ackGo";showing=null;
   if(queue.length)nextFlash();else{$("overlay").classList.remove("on");if(go)show("messages");else renderTrack();}
 });
@@ -916,11 +986,12 @@ function applyLock(){
 }
 $("submitBtn").addEventListener("click",function(){
   var err=$("submitErr");err.textContent="";
-  if(!ME.teamName){err.textContent="Create your team on the Situation tab first.";return;}
+  if(!TEAMID){err.textContent="Sign in with your team login first.";return;}
   if(!db||!uid||!canSave){err.textContent="Not connected, so your answers can’t be submitted. Reload the page and try again.";return;}
   var blanks=ASSESS.concat(PLANF,DECF).filter(function(f){return !(ME.answers[f.id]||"").trim();}).length;
   if(!confirm((blanks?blanks+" written answer"+(blanks>1?"s are":" is")+" still blank. ":"")+"Submit your final answers now? You won’t be able to edit them afterwards."))return;
-  ME.submitted=true;ME.submittedAt=Date.now();saveLocal();clearTimeout(saveTimer);pushTeam();applyLock();onLive();
+  ME.submitted=true;ME.submittedAt=Date.now();PEND[pkey(["submitted"])]=["submitted"];PEND[pkey(["submittedAt"])]=["submittedAt"];
+  clearTimeout(saveTimer);pushTeam();applyLock();onLive();
 });
 
 function debriefFor(d,who){
@@ -945,68 +1016,29 @@ $("copyAll").addEventListener("click",function(){
   else $("copyNote").textContent="Copy isn’t available here: open each team’s debrief and select the text.";
 });
 $("clearTeams").addEventListener("click",function(){
-  if(!confirm("Delete every team’s answers? This can’t be undone."))return;
+  if(!confirm("Delete every team’s answers and your ratings? Team logins are kept. This can’t be undone."))return;
   var ids=TEAMS.map(function(t){return t.id;});
-  db.collection("teamNames").get().then(function(q){
-    var paths=ids.map(function(id){return "teams/"+id;}).concat(q.docs.map(function(d){return "teamNames/"+d.id;}));
-    return paths.reduce(function(p,path){return p.then(function(){return db.doc(path).delete();});},Promise.resolve());
-  }).catch(function(){setStatus("Some team answers couldn’t be cleared.",true);});
+  ids.reduce(function(p,id){return p.then(function(){return db.doc("teams/"+id).delete();});},Promise.resolve())
+    .then(function(){RATINGS={};return db.doc("fac/ratings").set({});})
+    .catch(function(){setStatus("Some team answers couldn’t be cleared.",true);});
 });
 
 /* ---------- Live updates ---------- */
 function onLive(){
+  if(!SIGNED)return;
   tick();renderTrack();renderMessages();checkNew();
   if(isFac){renderDur();if(!$("editor").contains(document.activeElement))renderEditor();if(TEAMS.length)renderTeams();}
   var l=L();
   if(!isFac&&ME.submitted)setStatus("Answers submitted. Thank you.");
-  else if(!isFac&&!ME.teamName)setStatus("Start by creating your team at the top of the Situation tab. Your answers are saved once your team exists.",true);
   else if(!isFac)setStatus(l.status==="idle"?"Waiting for the facilitator to start. Read the situation brief in the meantime.":l.status==="paused"?"The facilitator has paused the exercise.":"Exercise running. Your answers save automatically.");
   else setStatus(l.status==="idle"?"You are the facilitator. Prepare your messages, then start the exercise.":l.status==="paused"?"Paused. Teams see the clock stopped.":"Running. Keep this page open so scheduled messages go out.");
 }
 
 /* ---------- Boot ---------- */
 function renderAll(){
-  renderTeamLine();
   renderMap();renderFields("assessFields",ASSESS);renderFields("planFields",PLANF);renderFields("decisionFields",DECF);renderBoard();renderMessages();tick();applyLock();
 }
-loadLocal();renderAll();show(location.hash.slice(1)||"situation");
-
-/* ---------- Team creation ---------- */
-var renaming=false;
-function nameKey(n){return String(n).toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g,"").replace(/[^\p{L}\p{N}]+/gu,"-").replace(/^-+|-+$/g,"").slice(0,60);}
-function cleanName(n){return String(n).replace(/\s+/g," ").trim();}
-function renderTeamLine(){
-  var has=!!ME.teamName&&!renaming;
-  $("teamCreate").hidden=has;$("teamDone").hidden=!has;
-  $("teamShown").textContent=ME.teamName||"";
-  $("createTeam").textContent=renaming?"Save new name":"Create team";
-  $("cancelRename").hidden=!renaming;
-  $("teamHint").textContent=renaming?"Choose a new name. It must differ from other teams’ names.":"Create your team before you start. Each team needs a different name.";
-}
-async function createTeam(){
-  var name=cleanName($("teamName").value),err=$("teamErr"),btn=$("createTeam");
-  err.textContent="";
-  if(name.length<2){err.textContent="Enter a team name of at least 2 characters.";return;}
-  var key=nameKey(name);
-  if(!key){err.textContent="Use letters or numbers in the team name.";return;}
-  if(!db||!uid){err.textContent="Not connected yet. Wait a moment and try again.";return;}
-  var oldKey=ME.teamName?nameKey(ME.teamName):"";
-  btn.disabled=true;
-  try{
-    var ref=db.doc("teamNames/"+key),s=await ref.get();
-    if(s.exists&&s.data().uid!==uid){err.textContent="A team called “"+s.data().name+"” already exists. Choose a different name.";return;}
-    if(!s.exists)await ref.set({uid:uid,name:name,createdAt:Date.now()});
-    if(oldKey&&oldKey!==key)db.doc("teamNames/"+oldKey).delete().catch(function(){});
-    ME.teamName=name;renaming=false;saveLocal();pushTeam();
-    renderTeamLine();onLive();
-  }catch(e){
-    err.textContent=e&&e.code==="permission-denied"?"Another team just took that name. Choose a different name.":"Couldn’t create the team. Check your connection and try again.";
-  }finally{btn.disabled=false;}
-}
-$("createTeam").addEventListener("click",createTeam);
-$("teamName").addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();createTeam();}});
-$("renameTeam").addEventListener("click",function(){renaming=true;$("teamName").value=ME.teamName;$("teamErr").textContent="";renderTeamLine();$("teamName").focus();});
-$("cancelRename").addEventListener("click",function(){renaming=false;$("teamErr").textContent="";renderTeamLine();});
+renderAll();show("login");
 
 /* ---------- Import / export ---------- */
 $("exportBtn").addEventListener("click",function(){
@@ -1031,20 +1063,149 @@ $("importFile").addEventListener("change",function(e){
 });
 
 /* ---------- Sign-in ---------- */
-function openLogin(){$("lgErr").textContent="";$("loginOv").classList.add("on");setTimeout(function(){$("lgEmail").focus();},50);}
-$("lgCancel").addEventListener("click",function(){$("loginOv").classList.remove("on");});
-$("facBtn").addEventListener("click",function(){
-  if(AUTHUSER&&!AUTHUSER.isAnonymous){
-    if(dirty&&!confirm("You have unsaved message changes. Sign out anyway?"))return;
-    dirty=false;signOut(AUTH).then(function(){location.reload();});
-  } else openLogin();
-});
-$("loginForm").addEventListener("submit",function(e){
-  e.preventDefault();$("lgGo").disabled=true;$("lgErr").textContent="";
-  signInWithEmailAndPassword(AUTH,$("lgEmail").value.trim(),$("lgPass").value).then(function(){location.reload();},function(err){
-    $("lgGo").disabled=false;
-    $("lgErr").textContent=(err&&(err.code==="auth/invalid-credential"||err.code==="auth/wrong-password"||err.code==="auth/user-not-found"))?"Email or password is incorrect.":"Sign-in failed. Check your connection and try again.";
+function loginToEmail(v){v=v.trim();return v.indexOf("@")>=0?v.toLowerCase():v.toLowerCase().replace(/\s+/g,"")+"@"+DOMAIN;}
+$("gateForm").addEventListener("submit",function(e){
+  e.preventDefault();var err=$("gErr"),btn=$("gGo");err.textContent="";
+  var lg=$("gLogin").value,pw=$("gPass").value;
+  if(!lg.trim()||!pw){err.textContent="Enter your login and password.";return;}
+  if(!AUTH){err.textContent="The exercise isn’t set up yet. Tell your facilitator.";return;}
+  btn.disabled=true;btn.textContent="Signing in…";
+  signInWithEmailAndPassword(AUTH,loginToEmail(lg),pw).catch(function(x){
+    var c=x&&x.code||"";
+    err.textContent=(c==="auth/invalid-credential"||c==="auth/wrong-password"||c==="auth/user-not-found"||c==="auth/invalid-email")?"Login or password is incorrect.":c==="auth/too-many-requests"?"Too many attempts. Wait a few minutes and try again.":"Sign-in failed. Check your connection and try again.";
+    btn.disabled=false;btn.textContent="Sign in";
   });
+});
+$("signOutBtn").addEventListener("click",function(){
+  if(dirty&&!confirm("You have unsaved message changes. Sign out anyway?"))return;
+  dirty=false;clearTimeout(saveTimer);
+  var flush=Object.keys(PEND).length&&TEAMID?(pushTeam(),new Promise(function(r){setTimeout(r,1200);})):Promise.resolve();
+  flush.then(function(){return signOut(AUTH);}).then(function(){location.hash="";location.reload();});
+});
+
+/* ---------- Team logins (facilitator) ---------- */
+var CREDS={teams:[]},CA=null,busyLogins=false;
+function creator(){if(!CA){var a2=initializeApp(CONF,"team-creator");CA=initializeAuth(a2,{persistence:inMemoryPersistence});}return CA;}
+function genPw(){var al="abcdefghjkmnpqrstuvwxyz23456789",b=new Uint32Array(8),o="";crypto.getRandomValues(b);for(var i=0;i<8;i++)o+=al[b[i]%al.length];return o;}
+function loginSlug(n){return String(n).toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"").slice(0,24);}
+function credById(id){return (CREDS.teams||[]).filter(function(t){return t.id===id;})[0];}
+function syncNames(){TEAMS.forEach(function(t){var c=credById(t.id);if(c)t.data.teamName=c.name;});}
+function saveCreds(){return db.doc("fac/teamCreds").set(clone(CREDS));}
+function note(t){$("loginNote").textContent=t||"";}
+function siteUrl(){return location.origin+location.pathname.replace(/index\.html$/,"");}
+function renderLogins(){
+  var ts=CREDS.teams||[];
+  if(!ts.length){$("logins").innerHTML='<div class="empty" style="margin:10px 0">No team logins yet. Choose how many teams to add, then create their logins.</div>';return;}
+  if($("logins").contains(document.activeElement))return;
+  $("logins").innerHTML='<div class="logins-wrap"><table class="logins"><thead><tr><th>Team name</th><th>Login</th><th>Password</th><th>Answers</th><th></th></tr></thead><tbody>'+
+    ts.map(function(t){var has=TEAMS.some(function(x){return x.id===t.id;});
+      return '<tr><td><input type="text" maxlength="40" data-rename="'+esc(t.id)+'" value="'+esc(t.name)+'" aria-label="Team name"></td><td class="mono">'+esc(t.login)+'</td><td class="mono">'+esc(t.password)+'</td><td class="small">'+(has?"Started":"Not yet")+'</td>'+
+        '<td><div class="row"><button class="btn sm" data-newpw="'+esc(t.id)+'">New password</button><button class="btn sm danger" data-del="'+esc(t.id)+'">Delete</button></div></td></tr>';}).join("")+
+    '</tbody></table></div>';
+}
+async function createLogin(name,taken){
+  var base=loginSlug(name)||"team",login=base,n=2,pw=genPw(),u=null;
+  while(taken[login])login=base+(n++);
+  for(var tries=0;tries<6&&!u;tries++){
+    try{var cr=await createUserWithEmailAndPassword(creator(),login+"@"+DOMAIN,pw);u=cr.user;await signOut(creator());}
+    catch(e){if(e&&e.code==="auth/email-already-in-use"){login=base+(n++);continue;}throw e;}
+  }
+  if(!u)throw new Error("no free login");
+  await db.doc("roster/"+login).set({uid:u.uid,name:name});
+  taken[login]=1;
+  return {id:login,name:name,login:login,password:pw,uid:u.uid,createdAt:Date.now()};
+}
+$("makeTeams").addEventListener("click",async function(){
+  if(busyLogins)return;
+  var n=Math.max(1,Math.min(30,parseInt($("nTeams").value,10)||0)),prefix=($("teamPrefix").value||"Group").replace(/\s+/g," ").trim()||"Group";
+  var ts=CREDS.teams||(CREDS.teams=[]),taken={},names={};
+  ts.forEach(function(t){taken[t.login]=1;names[t.name.toLowerCase()]=1;});
+  busyLogins=true;$("makeTeams").disabled=true;
+  var k=1,made=0;
+  try{
+    for(var i=0;i<n;i++){
+      while(names[(prefix+" "+k).toLowerCase()])k++;
+      var name=prefix+" "+k;names[name.toLowerCase()]=1;
+      note("Creating "+name+"… ("+(i+1)+" of "+n+")");
+      ts.push(await createLogin(name,taken));made++;
+      await saveCreds();renderLogins();
+    }
+    note(made+" team login"+(made>1?"s":"")+" created.");
+  }catch(e){
+    note((made?made+" created, then ":"")+(e&&e.code==="auth/operation-not-allowed"?"Email/Password sign-in is turned off in Firebase. Turn it on (README, step 2).":e&&e.code==="auth/too-many-requests"?"Firebase is limiting new accounts. Wait an hour, then add the rest.":"creating a login failed. Check your connection and try again."));
+  }finally{busyLogins=false;$("makeTeams").disabled=false;renderLogins();}
+});
+$("logins").addEventListener("change",function(e){
+  var inp=e.target.closest("[data-rename]");if(!inp)return;
+  var t=credById(inp.dataset.rename),nm=inp.value.replace(/\s+/g," ").trim();
+  if(!t||!nm){inp.value=t?t.name:"";return;}
+  if((CREDS.teams||[]).some(function(x){return x!==t&&x.name.toLowerCase()===nm.toLowerCase();})){alert("Another team already has that name.");inp.value=t.name;return;}
+  t.name=nm;saveCreds();db.doc("roster/"+t.id).update({name:nm}).catch(function(){});
+  if(TEAMS.some(function(x){return x.id===t.id;}))db.doc("teams/"+t.id).merge({teamName:nm}).catch(function(){});
+  syncNames();renderTeams();
+});
+async function newPassword(t){
+  var c=creator(),np=genPw();
+  await signInWithEmailAndPassword(c,t.login+"@"+DOMAIN,t.password);
+  await updatePassword(c.currentUser,np);await signOut(c);
+  t.password=np;await saveCreds();
+}
+async function removeLogin(t){
+  var c=creator();
+  try{await signInWithEmailAndPassword(c,t.login+"@"+DOMAIN,t.password);await deleteUser(c.currentUser);}
+  catch(e){if(!(e&&(e.code==="auth/user-not-found"||e.code==="auth/invalid-credential")))throw e;}
+  await db.doc("roster/"+t.id).delete();
+  await db.doc("teams/"+t.id).delete().catch(function(){});
+  if(RATINGS[t.id]){delete RATINGS[t.id];await db.doc("fac/ratings").set(clone(RATINGS));}
+  CREDS.teams=(CREDS.teams||[]).filter(function(x){return x!==t;});await saveCreds();
+}
+$("logins").addEventListener("click",async function(e){
+  var b=e.target.closest("[data-newpw],[data-del]");if(!b||busyLogins)return;
+  var t=credById(b.dataset.newpw||b.dataset.del);if(!t)return;
+  if(b.dataset.del&&!confirm("Delete the login for "+t.name+", with its answers and ratings? This can’t be undone."))return;
+  if(b.dataset.newpw&&!confirm("Give "+t.name+" a new password? Devices signed in with the old one will be signed out within the hour."))return;
+  busyLogins=true;b.disabled=true;
+  try{if(b.dataset.del){await removeLogin(t);note(t.name+" deleted.");}else{await newPassword(t);note("New password set for "+t.name+".");}}
+  catch(x){note("That didn’t work. Check your connection and try again.");}
+  finally{busyLogins=false;renderLogins();}
+});
+$("newPwAll").addEventListener("click",async function(){
+  var ts=(CREDS.teams||[]).slice();if(!ts.length||busyLogins)return;
+  if(!confirm("Give every team a new password? Use this before a new group of participants."))return;
+  busyLogins=true;var done=0;
+  try{for(var i=0;i<ts.length;i++){note("Updating "+ts[i].name+"…");await newPassword(ts[i]);done++;}note("New passwords set for "+done+" teams.");}
+  catch(e){note("Stopped after "+done+" teams. Try again for the rest.");}
+  finally{busyLogins=false;renderLogins();}
+});
+$("delAll").addEventListener("click",async function(){
+  var ts=(CREDS.teams||[]).slice();if(!ts.length||busyLogins)return;
+  if(!confirm("Delete all "+ts.length+" team logins with their answers and ratings? This can’t be undone."))return;
+  busyLogins=true;var done=0;
+  try{for(var i=0;i<ts.length;i++){note("Deleting "+ts[i].name+"…");await removeLogin(ts[i]);done++;}note("All team logins deleted.");}
+  catch(e){note("Stopped after "+done+" teams. Try again for the rest.");}
+  finally{busyLogins=false;renderLogins();}
+});
+$("copyLogins").addEventListener("click",function(){
+  var ts=CREDS.teams||[];if(!ts.length)return;
+  var txt="Exercise SAREVIA – "+siteUrl()+"\n\n"+ts.map(function(t){return t.name+"\n  Login: "+t.login+"\n  Password: "+t.password;}).join("\n\n");
+  (navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(txt):Promise.reject()).then(function(){note("Login list copied.");},function(){note("Copy isn’t available; use the login cards PDF instead.");});
+});
+$("cardsPdf").addEventListener("click",function(){
+  var ts=CREDS.teams||[];if(!ts.length){note("Create team logins first.");return;}
+  var btn=$("cardsPdf");btn.disabled=true;
+  ensurePdf().then(function(){
+    var url=siteUrl(),cards=ts.map(function(t){return {stack:[
+      {text:"Exercise SAREVIA",color:"#2C6DB5",bold:true,fontSize:9},
+      {text:t.name,fontSize:20,bold:true,margin:[0,2,0,8]},
+      {text:"Website",fontSize:8,color:"#56657A"},{text:url,fontSize:9.5,margin:[0,0,0,6]},
+      {columns:[{stack:[{text:"Login",fontSize:8,color:"#56657A"},{text:t.login,fontSize:15,bold:true}]},{stack:[{text:"Password",fontSize:8,color:"#56657A"},{text:t.password,fontSize:15,bold:true}]}]},
+      {text:"Everyone in the team can sign in with these details on their own device.",fontSize:8,color:"#56657A",margin:[0,8,0,0]}
+    ],margin:[12,12,12,12]};});
+    var rows=[];for(var i=0;i<cards.length;i+=2)rows.push([cards[i],cards[i+1]||{text:""}]);
+    window.pdfMake.createPdf({pageSize:"A4",pageMargins:[36,40,36,40],content:[{table:{widths:["*","*"],dontBreakRows:true,body:rows},
+      layout:{hLineWidth:function(){return 1;},vLineWidth:function(){return 1;},hLineColor:function(){return "#9AA8B8";},vLineColor:function(){return "#9AA8B8";},hLineStyle:function(){return {dash:{length:4}};},vLineStyle:function(){return {dash:{length:4}};}}}],
+      defaultStyle:{color:"#14243A"}}).download("sarevia-team-logins.pdf");
+  }).catch(function(){note("Couldn’t create the PDF. Check your internet connection.");}).then(function(){btn.disabled=false;});
 });
 
 /* ---------- Firebase adapter ---------- */
@@ -1054,6 +1215,7 @@ function makeDb(fs){
     doc:function(path){var r=fDoc(fs,path);return {
       get:function(){return getDoc(r).then(wrap);},
       set:function(d){return setDoc(r,d);},
+      merge:function(d){return setDoc(r,d,{merge:true});},
       update:function(d){return updateDoc(r,d);},
       delete:function(){return deleteDoc(r);},
       onSnapshot:function(n,e){return onSnapshot(r,function(s){n(wrap(s));},e);}
@@ -1073,49 +1235,53 @@ var booted=false;
   if(!C){try{/* global firebaseConfig */C=(typeof firebaseConfig!=="undefined")?firebaseConfig:null;}catch(e){C=null;}}
   if(!window.__cfgLoaded&&!C){setStatus("Setup needed: firebase-config.js was not found or has an error. Put it in the same folder as index.html, and check it contains only the settings block (no “import” lines).",true);return;}
   if(!C||!C.apiKey||/PASTE/.test(C.apiKey)){setStatus("Setup needed: firebase-config.js still has the placeholder values. Replace them with your Firebase project settings (README, step 4).",true);return;}
+  CONF=C;DOMAIN=String(C.authDomain||(C.projectId+".firebaseapp.com")).toLowerCase();
   var app=initializeApp(C);
   AUTH=getAuth(app);
   var fs=initializeFirestore(app,{ignoreUndefinedProperties:true});
   db=makeDb(fs);
+  setStatus("Connecting…");
   onAuthStateChanged(AUTH,async function(u){
-    if(!u){signInAnonymously(AUTH).catch(function(){setStatus("Couldn’t connect. In Firebase, turn on Anonymous sign-in (see the README), then reload.",true);});return;}
+    if(!u){SIGNED=false;$("signOutBtn").hidden=true;setStatus("Sign in to join the exercise.");show("login");setTimeout(function(){$("gLogin").focus();},50);return;}
     if(booted)return;booted=true;
     AUTHUSER=u;uid=u.uid;
-    $("facBtn").hidden=false;
-    if(!u.isAnonymous){
-      $("facBtn").textContent="Sign out ("+u.email+")";
-      try{await getDoc(fDoc(fs,"fac/config"));isFac=true;$("whoLine").textContent="Facilitator view · fictional scenario";}
-      catch(e){isFac=false;}
-    }
-    try{var mine=await db.doc("teams/"+uid).get();
-      if(mine.exists){var d=clone(mine.data());if(!d.alloc)d.alloc=blankAlloc();ME=Object.assign({teamName:"",answers:{},coa:{},acks:[]},d);delete ME.updatedAt;saveLocal();renderAll();}
-    }catch(e){}
-    if(ME.teamName){
-      try{var reg=await db.doc("teamNames/"+nameKey(ME.teamName)).get();
-        if(!reg.exists||reg.data().uid!==uid){
-          // The facilitator cleared the teams: start fresh for the new group.
-          ME={teamName:"",answers:{},coa:{},alloc:blankAlloc(),acks:[]};saveLocal();renderAll();
-        }
+    $("signOutBtn").hidden=false;$("signOutBtn").textContent="Sign out";
+    try{await getDoc(fDoc(fs,"fac/config"));isFac=true;}catch(e){isFac=false;}
+    if(isFac){
+      $("whoLine").textContent="Facilitator · "+u.email;
+    } else {
+      var local=String(u.email||"").split("@")[0];
+      try{var r=await db.doc("roster/"+local).get();if(r.exists&&r.data().uid===u.uid){TEAMID=local;ME.teamName=r.data().name||local;}}catch(e){}
+      if(!TEAMID){
+        SIGNED=false;show("login");
+        $("gErr").textContent="This account isn’t a team login for this exercise. Sign out and use the details your facilitator gave you.";
+        setStatus("Signed in as "+(u.email||"unknown")+", which isn’t a team or facilitator account here. If you’re a facilitator, add your email to the Firestore rules (README, step 3).",true);
+        return;
+      }
+      $("whoLine").textContent=ME.teamName+" · UNMISA integrated planning team";
+      loadLocal();
+      try{var mine=await db.doc("teams/"+TEAMID).get();
+        if(mine.exists){var d=mine.data();ME.answers=Object.assign({},d.answers||{});ME.coa=Object.assign({},d.coa||{});
+          var al=blankAlloc();Object.keys(d.alloc||{}).forEach(function(rg){if(al[rg])Object.keys(d.alloc[rg]||{}).forEach(function(a){al[rg][a]=+d.alloc[rg][a]||0;});});ME.alloc=al;
+          ME.submitted=!!d.submitted;ME.submittedAt=d.submittedAt||null;}
       }catch(e){}
+      db.doc("teams/"+TEAMID).onSnapshot(function(s){if(s.exists)applyRemote(s.data());});
     }
-    if(isFac)$("teamLine").hidden=true;
-    else db.doc("teams/"+uid).onSnapshot(function(s){
-      if(!s.exists||saving||again)return;var sub=!!s.data().submitted;
-      if(sub!==!!ME.submitted){ME.submitted=sub;if(!sub)ME.submittedAt=null;saveLocal();applyLock();onLive();}
-    });
-    applyLock();
+    SIGNED=true;
+    renderAll();
+    var h=location.hash.slice(1);show(h&&h!=="login"?h:"situation");
     db.doc("live/state").onSnapshot(function(s){LIVE=s.exists?s.data():null;onLive();},function(){setStatus("Lost the live connection. Reload the page.",true);});
     if(isFac){
       db.doc("fac/config").onSnapshot(function(s){
         CFG=s.exists?s.data():{messages:[]};
         if(!dirty){DRAFT=clone(CFG);delete DRAFT.updatedAt;if(!DRAFT.messages)DRAFT.messages=[];renderEditor();}
       });
-      db.collection("teams").onSnapshot(function(q){TEAMS=q.docs.map(function(d){return {id:d.id,data:d.data()};});renderTeams();});
+      db.doc("fac/teamCreds").onSnapshot(function(s){if(!busyLogins){CREDS=s.exists?clone(s.data()):{teams:[]};if(!CREDS.teams)CREDS.teams=[];}syncNames();renderLogins();renderTeams();});
+      db.collection("teams").onSnapshot(function(q){TEAMS=q.docs.map(function(d){return {id:d.id,data:d.data()};});syncNames();renderTeams();renderLogins();});
       db.doc("fac/ratings").onSnapshot(function(s){if(!ratingsDirty){RATINGS=s.exists?clone(s.data()):{};renderTeams();}});
-      renderDur();
+      renderDur();renderLogins();
     }
     renderTrack();onLive();
-    if(!u.isAnonymous&&!isFac)setStatus("You’re signed in as "+u.email+", but this account isn’t a facilitator. Add it to the Firestore rules (see the README).",true);
   });
 })();
 })();
