@@ -82,6 +82,11 @@ h3{font-size:1rem;margin:20px 0 6px}
 .small{font-size:.86rem;color:var(--muted)}
 .teamline{display:flex;gap:10px;align-items:end;flex-wrap:wrap;background:var(--un-soft);border-radius:8px;padding:14px 16px;margin:0 0 22px;max-width:780px}
 .teamline .field{margin:0;flex:1;min-width:220px}
+#teamCreate{display:flex;gap:10px;align-items:end;flex-wrap:wrap;flex:1}
+#teamDone{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+#teamDone b{font-size:1.15rem}
+.teamerr{flex-basis:100%;margin:0;color:var(--flash);font-size:.88rem;font-weight:600}
+.teamerr:empty{display:none}
 
 .map svg{width:100%;height:auto;display:block}
 .map .reg{stroke:var(--surface);stroke-width:2.5;cursor:pointer}
@@ -203,7 +208,13 @@ label.btn{display:inline-block}
 <main>
 <section class="view" id="v-situation">
   <div class="teamline" id="teamLine">
-    <div class="field"><label for="teamName">Your team name</label><span class="hint">Shown to the facilitator with your answers.</span><input type="text" id="teamName" maxlength="40" placeholder="e.g. Team Blue"></div>
+    <div id="teamCreate">
+      <div class="field"><label for="teamName">Team name</label><span class="hint" id="teamHint">Create your team before you start. Each team needs a different name.</span><input type="text" id="teamName" maxlength="40" placeholder="e.g. Team Blue" autocomplete="off"></div>
+      <button class="btn primary" id="createTeam">Create team</button>
+      <button class="btn" id="cancelRename" hidden>Cancel</button>
+      <p class="teamerr" id="teamErr" role="alert"></p>
+    </div>
+    <div id="teamDone" hidden><span class="small">Your team</span><b id="teamShown"></b><button class="btn sm" id="renameTeam">Rename</button></div>
   </div>
   <h1>Republic of Sarevia: situation brief</h1>
   <p class="lede">Read this brief as a team. Click a region on the map for its details. Everything in this exercise is fictional.</p>
@@ -323,7 +334,7 @@ label.btn{display:inline-block}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { initializeFirestore, doc as fDoc, collection as fCollection, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { initializeFirestore, doc as fDoc, collection as fCollection, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 (function(){
 "use strict";
@@ -397,7 +408,7 @@ function frac(){return Math.min(1,elapsed()/(L().duration*60000));}
 
 /* ---------- Saving the team's work ---------- */
 var saveTimer=null,saving=false,again=false;
-function changed(){saveLocal();if(!db||!uid||!canSave)return;clearTimeout(saveTimer);saveTimer=setTimeout(pushTeam,2000);}
+function changed(){saveLocal();if(!db||!uid||!canSave||!ME.teamName)return;clearTimeout(saveTimer);saveTimer=setTimeout(pushTeam,2000);}
 function pushTeam(){
   if(saving){again=true;return;}
   saving=true;
@@ -464,8 +475,7 @@ document.addEventListener("input",function(e){
     var c=$(t.id+"_c");if(c){c.textContent=t.value.length+" / "+t.dataset.max;c.classList.toggle("over",t.value.length>+t.dataset.max);}
   } else if(t.classList.contains("cell")){
     var n=parseInt(t.value,10);ME.alloc[t.dataset.r][t.dataset.a]=isNaN(n)||n<0?0:n;changed();updateTotals();
-  } else if(t.id==="teamName"){ME.teamName=t.value;changed();}
-  else if(t.closest&&t.closest("#editor")){editorInput(t);}
+  } else if(t.closest&&t.closest("#editor")){editorInput(t);}
 });
 
 /* ---------- Allocation ---------- */
@@ -694,7 +704,10 @@ $("copyAll").addEventListener("click",function(){
 $("clearTeams").addEventListener("click",function(){
   if(!confirm("Delete every team’s answers? This can’t be undone."))return;
   var ids=TEAMS.map(function(t){return t.id;});
-  ids.reduce(function(p,id){return p.then(function(){return db.doc("teams/"+id).delete();});},Promise.resolve()).catch(function(){setStatus("Some team answers couldn’t be cleared.",true);});
+  db.collection("teamNames").get().then(function(q){
+    var paths=ids.map(function(id){return "teams/"+id;}).concat(q.docs.map(function(d){return "teamNames/"+d.id;}));
+    return paths.reduce(function(p,path){return p.then(function(){return db.doc(path).delete();});},Promise.resolve());
+  }).catch(function(){setStatus("Some team answers couldn’t be cleared.",true);});
 });
 
 /* ---------- Live updates ---------- */
@@ -702,16 +715,54 @@ function onLive(){
   tick();renderTrack();renderMessages();checkNew();
   if(isFac){renderDur();if(!$("editor").contains(document.activeElement))renderEditor();if(TEAMS.length)renderTeams();}
   var l=L();
-  if(!isFac)setStatus(l.status==="idle"?"Waiting for the facilitator to start. Read the situation brief in the meantime.":l.status==="paused"?"The facilitator has paused the exercise.":"Exercise running. Your answers save automatically.");
+  if(!isFac&&!ME.teamName)setStatus("Start by creating your team at the top of the Situation tab. Your answers are saved once your team exists.",true);
+  else if(!isFac)setStatus(l.status==="idle"?"Waiting for the facilitator to start. Read the situation brief in the meantime.":l.status==="paused"?"The facilitator has paused the exercise.":"Exercise running. Your answers save automatically.");
   else setStatus(l.status==="idle"?"You are the facilitator. Prepare your messages, then start the exercise.":l.status==="paused"?"Paused. Teams see the clock stopped.":"Running. Keep this page open so scheduled messages go out.");
 }
 
 /* ---------- Boot ---------- */
 function renderAll(){
-  $("teamName").value=ME.teamName||"";
+  renderTeamLine();
   renderMap();renderFields("assessFields",ASSESS);renderFields("planFields",PLANF);renderFields("decisionFields",DECF);renderBoard();renderMessages();tick();
 }
 loadLocal();renderAll();show(location.hash.slice(1)||"situation");
+
+/* ---------- Team creation ---------- */
+var renaming=false;
+function nameKey(n){return String(n).toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g,"").replace(/[^\p{L}\p{N}]+/gu,"-").replace(/^-+|-+$/g,"").slice(0,60);}
+function cleanName(n){return String(n).replace(/\s+/g," ").trim();}
+function renderTeamLine(){
+  var has=!!ME.teamName&&!renaming;
+  $("teamCreate").hidden=has;$("teamDone").hidden=!has;
+  $("teamShown").textContent=ME.teamName||"";
+  $("createTeam").textContent=renaming?"Save new name":"Create team";
+  $("cancelRename").hidden=!renaming;
+  $("teamHint").textContent=renaming?"Choose a new name. It must differ from other teams’ names.":"Create your team before you start. Each team needs a different name.";
+}
+async function createTeam(){
+  var name=cleanName($("teamName").value),err=$("teamErr"),btn=$("createTeam");
+  err.textContent="";
+  if(name.length<2){err.textContent="Enter a team name of at least 2 characters.";return;}
+  var key=nameKey(name);
+  if(!key){err.textContent="Use letters or numbers in the team name.";return;}
+  if(!db||!uid){err.textContent="Not connected yet. Wait a moment and try again.";return;}
+  var oldKey=ME.teamName?nameKey(ME.teamName):"";
+  btn.disabled=true;
+  try{
+    var ref=db.doc("teamNames/"+key),s=await ref.get();
+    if(s.exists&&s.data().uid!==uid){err.textContent="A team called “"+s.data().name+"” already exists. Choose a different name.";return;}
+    if(!s.exists)await ref.set({uid:uid,name:name,createdAt:Date.now()});
+    if(oldKey&&oldKey!==key)db.doc("teamNames/"+oldKey).delete().catch(function(){});
+    ME.teamName=name;renaming=false;saveLocal();pushTeam();
+    renderTeamLine();onLive();
+  }catch(e){
+    err.textContent=e&&e.code==="permission-denied"?"Another team just took that name. Choose a different name.":"Couldn’t create the team. Check your connection and try again.";
+  }finally{btn.disabled=false;}
+}
+$("createTeam").addEventListener("click",createTeam);
+$("teamName").addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();createTeam();}});
+$("renameTeam").addEventListener("click",function(){renaming=true;$("teamName").value=ME.teamName;$("teamErr").textContent="";renderTeamLine();$("teamName").focus();});
+$("cancelRename").addEventListener("click",function(){renaming=false;$("teamErr").textContent="";renderTeamLine();});
 
 /* ---------- Import / export ---------- */
 $("exportBtn").addEventListener("click",function(){
@@ -764,6 +815,7 @@ function makeDb(fs){
       onSnapshot:function(n,e){return onSnapshot(r,function(s){n(wrap(s));},e);}
     };},
     collection:function(path){var c=fCollection(fs,path);return {
+      get:function(){return getDocs(c).then(function(q){return {docs:q.docs.map(wrap)};});},
       onSnapshot:function(n,e){return onSnapshot(c,function(q){n({docs:q.docs.map(wrap)});},e);}
     };}
   };
@@ -791,6 +843,15 @@ var booted=false;
     try{var mine=await db.doc("teams/"+uid).get();
       if(mine.exists){var d=clone(mine.data());if(!d.alloc)d.alloc=blankAlloc();ME=Object.assign({teamName:"",answers:{},coa:{},acks:[]},d);delete ME.updatedAt;saveLocal();renderAll();}
     }catch(e){}
+    if(ME.teamName){
+      try{var reg=await db.doc("teamNames/"+nameKey(ME.teamName)).get();
+        if(!reg.exists||reg.data().uid!==uid){
+          // The facilitator cleared the teams: start fresh for the new group.
+          ME={teamName:"",answers:{},coa:{},alloc:blankAlloc(),acks:[]};saveLocal();renderAll();
+        }
+      }catch(e){}
+    }
+    if(isFac)$("teamLine").hidden=true;
     db.doc("live/state").onSnapshot(function(s){LIVE=s.exists?s.data():null;onLive();},function(){setStatus("Lost the live connection. Reload the page.",true);});
     if(isFac){
       db.doc("fac/config").onSnapshot(function(s){

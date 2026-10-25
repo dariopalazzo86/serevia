@@ -1,0 +1,46 @@
+{
+  "messages": [
+    {
+      "title": "Attack on Ebba IDP site 2",
+      "from": "JOC UNMISA",
+      "prec": "FLASH",
+      "sendAt": 30,
+      "body": "At 0540 this morning, armed men entered IDP site 2, 6 km north of Ebba. Initial reports: 14 civilians killed, at least 30 injured, about 3,000 people fleeing toward the Malvane border.\n\nSurvivors describe attackers in mixed uniforms. Two witnesses say a national army patrol was nearby and did not intervene; one claims soldiers took part. Videos are spreading online, and Aru youth leaders are calling for revenge against Tamboli communities.\n\nThe provincial governor asks UNMISA to provide fuel and helicopter transport to an army battalion to pursue the attackers.",
+      "question": "How does UNMISA respond in the next 72 hours?",
+      "options": [
+        "Surge the QRF and an FPU to Ebba, establish a temporary operating base, and provide the requested support to the army battalion.",
+        "Surge the QRF and an FPU to protect the IDP sites, deploy Human Rights and Civil Affairs teams, withhold support to the army battalion pending a due diligence review, and launch community engagement and public messaging.",
+        "Rely on national forces for security; send Human Rights monitors only and issue a statement condemning the attack."
+      ],
+      "notes": "Best: Option B. Look for: immediate protection of remaining sites and people moving to the border; Human Rights Due Diligence Policy before supporting the army; early Human Rights deployment to document and preserve evidence; Civil Affairs work to stop revenge cycles; public information against rumours; coordination with humanitarians and Malvane. Option A breaches due diligence; C fails the protection mandate."
+    },
+    {
+      "title": "General strike and fuel blockade",
+      "from": "Chief of Staff UNMISA",
+      "prec": "IMMEDIATE",
+      "sendAt": 41,
+      "body": "After the government removed fuel subsidies overnight, transport and public sector unions, backed by Sarevia Forward, have called an indefinite general strike. Roadblocks are up across Halden and at the gates of Corran port. Fuel trucks are not moving.\n\nMission Support reports nine days of fuel at current consumption. Helicopter hours will have to be cut by half within 72 hours unless supply resumes.\n\nA large march on parliament is called for tomorrow. The Minister of Interior has formally asked UNMISA to deploy FPUs to clear the roadblocks and restore order. Sarevia Forward says it will boycott the elections if the UN takes the government’s side.",
+      "question": "What is UNMISA’s posture?",
+      "options": [
+        "Deploy FPUs to clear the roadblocks as requested, to restore fuel supply and freedom of movement.",
+        "Decline crowd clearance; position FPUs to protect UN premises and civilians under imminent threat; advise and observe the national police on public-order and human rights standards; use good offices with unions, the government and Sarevia Forward; ration fuel and reprioritize flights.",
+        "Suspend all non-essential movement and wait for the strike to end."
+      ],
+      "notes": "Best: Option B. Look for: impartiality (clearing protesters for the government compromises the electoral role); FPUs within mandate and use-of-force rules, national police keep primary responsibility for public order; Police component advises and monitors; Human Rights monitors the march; good offices to keep the electoral calendar; fuel rationing with casualty evacuation and the East first."
+    },
+    {
+      "title": "Security Council renews mandate with changes",
+      "from": "UNHQ New York (DPO)",
+      "prec": "FLASH",
+      "sendAt": 52,
+      "body": "The Security Council has adopted resolution 2981 (fictional), renewing UNMISA for 12 months with three changes.\n\nFirst, the authorized troop ceiling is reduced: one infantry battalion is to be repatriated within six months. The police ceiling is unchanged. Second, support to the electoral process becomes a top priority task, alongside protection of civilians. Third, UNMISA is to support the national investigation into the Ebba attack and report to the Council within 90 days.\n\nThe Council also asks the Secretary-General to present benchmarks for a future transition. HQ requests the mission’s initial drawdown concept within 48 hours. Plan with four infantry battalions from now on.",
+      "question": "Which concept do you send to HQ?",
+      "options": [
+        "Withdraw the battalion from the South (lowest threat) and cover Corran with FPUs and IPO teams.",
+        "Withdraw the battalion from the West and cover the cantonment sites with FPUs, patrols from Halden, and accelerated DDR payments.",
+        "Keep all regions covered by thinning every battalion, and request a delay from the Council."
+      ],
+      "notes": "Usually best: Option A; B defensible only with a credible DDR payment plan; C ignores the Council. Look for: protection forces kept in North and East; police (unchanged ceiling) fill gaps; electoral teams and mobility shift to the election timeline; Human Rights and Police capacity assigned to the Ebba investigation; transition benchmarks mentioned in the decision brief."
+    }
+  ]
+}
