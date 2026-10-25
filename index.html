@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Exercise SAREVIA — Integrated Mission Planning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#E9EDF1; --surface:#F8FAFB; --ink:#14243A; --muted:#56657A; --line:#C9D1DB;
+  --un:#2C6DB5; --un-soft:#DCE8F6; --amber:#9A6508; --amber-soft:#F6E8C8;
+  --flash:#B3261E; --flash-soft:#F7DEDB; --ok:#2F7A55; --ok-soft:#D9EEE2;
+  --t-high:#E9B8B1; --t-med:#EED9A6; --t-low:#C6DFCF; --on-accent:#fff;
+  --sans:"Public Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --serif:"Source Serif 4",Georgia,"Times New Roman",serif;
+  color-scheme:light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0F1724; --surface:#172234; --ink:#E4EAF2; --muted:#95A3B6; --line:#2A3A52;
+    --un:#6FA6E6; --un-soft:#1D3150; --amber:#E0A93B; --amber-soft:#3A2E14;
+    --flash:#EF6B60; --flash-soft:#3D1D1B; --ok:#5FBF8B; --ok-soft:#183427;
+    --t-high:#5A2A26; --t-med:#53441C; --t-low:#1F4130; --on-accent:#0F1724; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0F1724; --surface:#172234; --ink:#E4EAF2; --muted:#95A3B6; --line:#2A3A52;
+  --un:#6FA6E6; --un-soft:#1D3150; --amber:#E0A93B; --amber-soft:#3A2E14;
+  --flash:#EF6B60; --flash-soft:#3D1D1B; --ok:#5FBF8B; --ok-soft:#183427;
+  --t-high:#5A2A26; --t-med:#53441C; --t-low:#1F4130; --on-accent:#0F1724; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 130px)}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--un);outline-offset:2px}
+[hidden]{display:none !important}
+
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.top-inner{max-width:1180px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.brand{display:flex;flex-direction:column;min-width:0;flex:1}
+.brand b{font-size:1.05rem}
+.brand span{color:var(--muted);font-size:.85rem}
+.clock{display:flex;align-items:center;gap:10px}
+.time{font-variant-numeric:tabular-nums;font-size:1.6rem;font-weight:700;min-width:5.2ch;text-align:right}
+.time.warn{color:var(--amber)} .time.over{color:var(--flash)} .time.idle{color:var(--muted)}
+.btn{border:1px solid var(--line);background:var(--surface);padding:8px 14px;border-radius:6px;font-weight:600;font-size:.92rem}
+.btn:hover{border-color:var(--un)}
+.btn.primary{background:var(--un);border-color:var(--un);color:var(--on-accent)}
+.btn.danger{color:var(--flash);border-color:var(--flash)}
+.btn.sm{padding:5px 10px;font-size:.84rem}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.status{max-width:1180px;margin:0 auto;padding:0 20px 8px;font-size:.86rem;color:var(--muted)}
+.status.alert{color:var(--flash);font-weight:600}
+
+.track{max-width:1180px;margin:0 auto;padding:0 20px 10px;display:flex;gap:4px;overflow-x:auto}
+.track button{flex:1 0 auto;border:0;background:transparent;padding:8px 10px 6px;border-bottom:3px solid var(--line);color:var(--muted);font-size:.88rem;font-weight:600;text-align:left;white-space:nowrap}
+.track button .n{display:inline-block;width:1.4em;opacity:.8}
+.track button.now{color:var(--ink);border-bottom-color:var(--amber)}
+.track button.sel{color:var(--un);border-bottom-color:var(--un)}
+.track button.fac{flex:0 0 auto;margin-left:12px}
+.track .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--flash);margin-left:6px;vertical-align:middle}
+
+main{max-width:1180px;margin:0 auto;padding:24px 20px 80px}
+.view{display:none} .view.on{display:block}
+h1{font-family:var(--serif);font-weight:600;font-size:2rem;line-height:1.15;margin:0 0 8px}
+h2{font-family:var(--serif);font-weight:600;font-size:1.35rem;margin:28px 0 8px}
+h3{font-size:1rem;margin:20px 0 6px}
+.lede{color:var(--muted);max-width:68ch;margin:0 0 20px}
+.doc{font-family:var(--serif);font-size:1.04rem;line-height:1.62;max-width:72ch}
+.doc p{margin:0 0 12px}
+.grid2{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:28px;align-items:start}
+@media (max-width:860px){.grid2{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:18px 20px}
+.mandate{border-left:4px solid var(--un);padding:12px 16px;background:var(--un-soft);border-radius:0 6px 6px 0;margin:12px 0}
+.mandate ol{margin:6px 0 0;padding-left:1.3em} .mandate li{margin:4px 0}
+.small{font-size:.86rem;color:var(--muted)}
+.teamline{display:flex;gap:10px;align-items:end;flex-wrap:wrap;background:var(--un-soft);border-radius:8px;padding:14px 16px;margin:0 0 22px;max-width:780px}
+.teamline .field{margin:0;flex:1;min-width:220px}
+
+.map svg{width:100%;height:auto;display:block}
+.map .reg{stroke:var(--surface);stroke-width:2.5;cursor:pointer}
+.map .reg:hover,.map .reg.sel{filter:brightness(.92)}
+.map .reg.sel{stroke:var(--un);stroke-width:3}
+.map text{font-family:var(--sans);fill:var(--ink);pointer-events:none}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:.84rem;color:var(--muted)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.region-card h3{margin-top:0;font-family:var(--serif);font-size:1.2rem}
+.tag{display:inline-block;font-size:.78rem;font-weight:700;padding:2px 8px;border-radius:99px;margin-left:6px;vertical-align:2px}
+.tag.High{background:var(--t-high)} .tag.Medium{background:var(--t-med)} .tag.Low{background:var(--t-low)}
+dl.facts{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;margin:8px 0 0;font-size:.93rem}
+dl.facts dt{color:var(--muted)} dl.facts dd{margin:0}
+
+.field{margin:0 0 18px;max-width:780px}
+.field label{display:block;font-weight:600;margin-bottom:2px}
+.field .hint{display:block;color:var(--muted);font-size:.86rem;margin-bottom:6px}
+textarea,input[type=text],input[type=number],select{width:100%;border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:9px 12px;line-height:1.45}
+textarea{min-height:84px;resize:vertical}
+.count{font-size:.8rem;color:var(--muted);text-align:right}
+.count.over{color:var(--flash)}
+
+.board-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table.board{border-collapse:collapse;width:100%;min-width:820px;font-size:.92rem}
+.board th,.board td{padding:8px;border-bottom:1px solid var(--line);text-align:center}
+.board th{font-weight:600;vertical-align:bottom}
+.board th small{display:block;font-weight:500;color:var(--muted);font-size:.76rem}
+.board td:first-child,.board th:first-child{text-align:left;padding-left:14px}
+.board input{width:3.6em;text-align:center;border:1px solid var(--line);border-radius:5px;padding:5px 2px;background:var(--paper);font-variant-numeric:tabular-nums}
+.board tr.tot td{font-weight:700;background:var(--paper)}
+.board td.bad{color:var(--flash)} .board td.good{color:var(--ok)}
+.checks{list-style:none;padding:0;margin:14px 0 0;max-width:780px}
+.checks li{padding:8px 12px;border-radius:6px;margin-bottom:6px;font-size:.92rem}
+.checks li.err{background:var(--flash-soft)} .checks li.warn{background:var(--amber-soft)} .checks li.ok{background:var(--ok-soft)}
+.checks li b{margin-right:6px}
+
+.msg{background:var(--surface);border:1px solid var(--line);border-radius:8px;margin:0 0 22px;overflow:hidden}
+.msg-head{display:grid;grid-template-columns:max-content 1fr;gap:2px 14px;padding:12px 18px;border-bottom:1px dashed var(--line);font-size:.86rem;font-variant-numeric:tabular-nums}
+.msg-head dt{color:var(--muted)} .msg-head dd{margin:0;font-weight:600}
+.prec{display:inline-block;padding:1px 8px;border-radius:4px;color:var(--on-accent);background:var(--flash)}
+.prec.amber{background:var(--amber)} .prec.blue{background:var(--un)}
+.msg-body{padding:14px 18px 4px;font-family:var(--serif);line-height:1.6;max-width:76ch}
+.msg-body p{margin:0 0 10px}
+.msg-task{padding:6px 18px 18px}
+.coa{display:block;border:1px solid var(--line);border-radius:6px;padding:10px 12px 10px 38px;margin:0 0 8px;position:relative;max-width:780px;cursor:pointer}
+.coa input{position:absolute;left:12px;top:13px}
+.coa:has(input:checked){border-color:var(--un);background:var(--un-soft)}
+.empty{border:1px dashed var(--line);border-radius:8px;padding:28px;color:var(--muted);text-align:center;max-width:780px}
+
+.overlay{position:fixed;inset:0;z-index:50;background:rgba(10,18,30,.66);display:none;align-items:center;justify-content:center;padding:calc(env(safe-area-inset-top,0px) + 16px) 16px calc(env(safe-area-inset-bottom,0px) + 16px)}
+.overlay.on{display:flex}
+.flash{width:min(720px,100%);max-height:100%;overflow:auto;background:var(--surface);border-radius:10px;border-top:10px solid var(--flash);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.flash.amber{border-top-color:var(--amber)} .flash.blue{border-top-color:var(--un)}
+.flash-strip{padding:14px 20px 0;font-weight:700;color:var(--flash);font-size:1.05rem}
+.flash.amber .flash-strip{color:var(--amber)} .flash.blue .flash-strip{color:var(--un)}
+.flash h2{margin:4px 20px 6px}
+.flash-actions{padding:6px 20px 20px;display:flex;gap:10px;flex-wrap:wrap}
+@media (prefers-reduced-motion:no-preference){
+  .overlay.on .flash{animation:drop .45s cubic-bezier(.2,.8,.2,1)}
+  @keyframes drop{from{transform:translateY(-24px);opacity:0}to{transform:none;opacity:1}}
+}
+
+.fac-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:10px}
+.fac-grid .panel h3{margin-top:0}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{border:0;background:var(--surface);padding:7px 12px;font-weight:600;font-size:.9rem}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--un);color:var(--on-accent)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.ed{border:1px solid var(--line);border-left:5px solid var(--line);border-radius:8px;background:var(--surface);padding:14px 16px;margin:0 0 14px;max-width:900px}
+.ed.sent{border-left-color:var(--ok)}
+.ed-top{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.ed-top b{flex:1;min-width:160px}
+.ed-grid{display:grid;grid-template-columns:2fr 1fr 1fr 110px;gap:10px}
+@media (max-width:700px){.ed-grid{grid-template-columns:1fr 1fr}}
+.ed .field{margin-bottom:10px;max-width:none}
+.ed .field label{font-size:.88rem}
+.pill{font-size:.78rem;font-weight:700;padding:2px 9px;border-radius:99px;background:var(--paper);color:var(--muted)}
+.pill.sent{background:var(--ok-soft);color:var(--ok)}
+.pill.due{background:var(--amber-soft);color:var(--amber)}
+.savebar{position:sticky;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);display:flex;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 14px;max-width:900px;box-shadow:0 6px 20px rgba(0,0,0,.12);z-index:3}
+.savebar span{flex:1;font-size:.9rem;color:var(--muted)}
+.savebar.dirty span{color:var(--amber);font-weight:600}
+.teams-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface);max-width:100%}
+table.teams{border-collapse:collapse;width:100%;min-width:640px;font-size:.9rem}
+.teams th,.teams td{padding:8px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.teams th{font-weight:600;color:var(--muted)}
+.teams td.c{text-align:center}
+details.debrief{margin-top:6px}
+details.debrief summary{cursor:pointer;color:var(--un);font-weight:600;font-size:.86rem}
+details.debrief pre{white-space:pre-wrap;font-family:var(--sans);font-size:.84rem;background:var(--paper);border-radius:6px;padding:10px;max-height:340px;overflow:auto}
+footer{max-width:1180px;margin:0 auto;padding:0 20px 30px;color:var(--muted);font-size:.82rem}
+footer p{margin:0 0 8px}
+.linkbtn{border:0;background:none;padding:0;color:var(--un);font-weight:600;text-decoration:underline;font-size:.84rem}
+.login{padding:20px 22px}
+.login h2{margin:0 0 14px}
+input[type=email],input[type=password]{width:100%;border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:9px 12px}
+label.btn{display:inline-block}
+@media (max-width:600px){h1{font-size:1.6rem}.time{font-size:1.3rem}.top-inner{padding:10px 14px}main{padding:18px 14px 70px}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="brand">
+      <b>Exercise SAREVIA</b>
+      <span id="whoLine">UNMISA integrated planning team · fictional scenario</span>
+    </div>
+    <div class="clock">
+      <span class="time idle" id="time">--:--</span>
+      <button class="btn primary" id="startBtn" hidden>Start exercise</button>
+    </div>
+  </div>
+  <div class="status" id="status">Connecting…</div>
+  <nav class="track" id="track" aria-label="Exercise stages"></nav>
+</header>
+
+<main>
+<section class="view" id="v-situation">
+  <div class="teamline" id="teamLine">
+    <div class="field"><label for="teamName">Your team name</label><span class="hint">Shown to the facilitator with your answers.</span><input type="text" id="teamName" maxlength="40" placeholder="e.g. Team Blue"></div>
+  </div>
+  <h1>Republic of Sarevia: situation brief</h1>
+  <p class="lede">Read this brief as a team. Click a region on the map for its details. Everything in this exercise is fictional.</p>
+  <div class="grid2">
+    <div class="doc">
+      <p>Eighteen months ago, the Government of Sarevia and the Northern Liberation Front (NLF) signed the Halden Peace Agreement, ending six years of armed conflict. The agreement promised national elections, the cantonment and reintegration of former fighters, and a reformed, accountable security sector. Elections are now scheduled in five months.</p>
+      <p>Implementation is behind schedule. A splinter faction, the NLF-Renewal (NLF-R), rejected the agreement and holds parts of the northern mining belt around Doru, financing itself through illegal gold extraction. In the east, about 48,000 internally displaced people live in three sites around Ebba, near the border with Malvane, where clashes between Aru farmers and Tamboli herders have flared since the rains failed.</p>
+      <p>In the west, 2,100 former combatants wait in cantonment sites near Lerin. Reintegration payments are three months late and NLF-R recruiters are active. In the capital, Halden, the government faces growing anger over living costs, and the main opposition party, Sarevia Forward, accuses the electoral commission of bias.</p>
+      <p>The national police are under-resourced and distrusted in the east. The national army has been accused of abuses in past operations, which places any UN support to it under the Human Rights Due Diligence Policy.</p>
+      <h2>Mandate</h2>
+      <div class="mandate">
+        <b>Security Council resolution 2950 (fictional), Chapter VII.</b> The Council decides that UNMISA’s priority tasks are:
+        <ol>
+          <li>Protection of civilians under threat of physical violence, with particular attention to displaced people, women and children.</li>
+          <li>Good offices and support to implementation of the Halden Peace Agreement, including disarmament, demobilization and reintegration.</li>
+          <li>Support to security sector reform and to the restoration of state authority and the rule of law.</li>
+          <li>Monitoring, investigating and reporting on human rights violations and abuses.</li>
+          <li>Technical and logistical support to the electoral process, upon request of national authorities.</li>
+        </ol>
+      </div>
+      <h2>Mission at a glance</h2>
+      <p>UNMISA is led by a Special Representative of the Secretary-General (SRSG). The Force has five infantry battalions and a quick reaction company; the Police component has six formed police units and individual police officers organized into colocation teams; civilian sections include Political, Civil Affairs, Human Rights, Electoral Affairs and DDR. Mission Support runs the logistics hub at Corran port, the country’s only fuel import point.</p>
+      <p class="small">Your team plays the Integrated Planning Team reporting to the Chief of Staff. Agree roles before you start: team lead, Force, Police, Civil Affairs or Political, Human Rights, and Mission Support.</p>
+    </div>
+    <div>
+      <div class="panel map">
+        <svg viewBox="0 0 420 310" role="img" aria-label="Map of Sarevia with five regions">
+          <path d="M392 70 L410 120 L404 190 L380 260" fill="none" stroke="var(--muted)" stroke-dasharray="5 5" stroke-width="1.5"/>
+          <text x="398" y="160" font-size="11" fill="var(--muted)" transform="rotate(90 398 160)" text-anchor="middle">Malvane</text>
+          <g id="mapRegions"></g><g id="mapSites"></g>
+          <text x="40" y="300" font-size="11" fill="var(--muted)">Gulf of Sarev</text>
+        </svg>
+        <div class="legend"><span><i style="background:var(--t-high)"></i>High threat</span><span><i style="background:var(--t-med)"></i>Medium</span><span><i style="background:var(--t-low)"></i>Low</span></div>
+      </div>
+      <div class="panel region-card" id="regionCard" style="margin-top:14px"></div>
+    </div>
+  </div>
+</section>
+
+<section class="view" id="v-assess">
+  <h1>Situation assessment</h1>
+  <p class="lede">Agree a shared picture before you commit resources. Keep answers short; you will build on them in the plan and the decision brief.</p>
+  <div id="assessFields"></div>
+</section>
+
+<section class="view" id="v-plan">
+  <h1>Integrated plan</h1>
+  <p class="lede">Allocate every asset to a region and state your intent for each line of effort. Revisit the allocation each time a message changes the situation.</p>
+  <h2>Asset allocation</h2>
+  <div class="board-wrap"><table class="board" id="board"></table></div>
+  <ul class="checks" id="checks"></ul>
+  <h2>Concept by line of effort</h2>
+  <div id="planFields"></div>
+</section>
+
+<section class="view" id="v-messages">
+  <h1>Incoming messages</h1>
+  <p class="lede">Messages from the Joint Operations Centre and Headquarters arrive while you work. Respond to each, then update your plan.</p>
+  <div id="msgList"></div>
+</section>
+
+<section class="view" id="v-decision">
+  <h1>Decision brief to the SRSG</h1>
+  <p class="lede">The SRSG has ten minutes. Lead with what you need decided, then the risks. Reflect everything that changed during the exercise.</p>
+  <div id="decisionFields"></div>
+</section>
+
+<section class="view" id="v-facilitator">
+  <h1>Facilitator console</h1>
+  <p class="lede">Only facilitator accounts named in your Firestore rules can open this tab or read the messages below. Participants receive a message only when it is sent. Keep this page open during the exercise: scheduled messages are sent from it.</p>
+  <div class="fac-grid">
+    <div class="panel">
+      <h3>Exercise length</h3>
+      <div class="seg" id="durSeg"></div>
+      <p class="small">Applies to every team’s clock.</p>
+    </div>
+    <div class="panel">
+      <h3>Message library</h3>
+      <div class="row"><button class="btn" id="exportBtn">Export messages</button><label class="btn" for="importFile">Import messages</label><input type="file" id="importFile" accept=".json,application/json" hidden></div>
+      <p class="small">Keep a copy of each scenario’s messages, or load the sample set.</p>
+    </div>
+    <div class="panel">
+      <h3>Clock</h3>
+      <div class="row"><button class="btn" id="addTime">Add 5 minutes</button><button class="btn danger" id="resetBtn">Reset exercise</button></div>
+      <p class="small">Reset stops the clock and withdraws all sent messages. Team answers are kept until you clear them below.</p>
+    </div>
+  </div>
+
+  <h2>Messages</h2>
+  <p class="small" style="max-width:70ch">Write the text participants will receive and set the minute it goes out (counted from the start). Leave the minute empty to send it only by hand. Options are one per line; leave them empty for a free-text response. Facilitator notes are never shown to participants.</p>
+  <div id="editor"></div>
+  <div class="row" style="margin:6px 0 16px"><button class="btn" id="addMsg">Add message</button></div>
+  <div class="savebar" id="saveBar"><span id="saveState">All changes saved</span><button class="btn primary" id="saveCfg">Save messages</button></div>
+
+  <h2>Teams</h2>
+  <p class="small">Answers update live as teams type.</p>
+  <div id="teams"></div>
+  <div class="row" style="margin-top:10px"><button class="btn" id="copyAll">Copy all debriefs</button><button class="btn danger" id="clearTeams">Clear team answers</button><span class="small" id="copyNote"></span></div>
+</section>
+</main>
+
+<footer><p>Exercise SAREVIA is a fictional training scenario. Countries, groups, resolutions and events are invented for instruction and do not represent real UN decisions.</p><button class="linkbtn" id="facBtn" hidden>Facilitator sign-in</button></footer>
+
+<div class="overlay" id="loginOv" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+  <form class="flash blue login" id="loginForm">
+    <h2 id="loginTitle">Facilitator sign-in</h2>
+    <div class="field"><label for="lgEmail">Email</label><input type="email" id="lgEmail" autocomplete="username" required></div>
+    <div class="field"><label for="lgPass">Password</label><input type="password" id="lgPass" autocomplete="current-password" required></div>
+    <p class="small" id="lgErr" role="alert"></p>
+    <div class="row"><button class="btn primary" type="submit" id="lgGo">Sign in</button><button class="btn" type="button" id="lgCancel">Cancel</button></div>
+  </form>
+</div>
+
+<div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="flashTitle"><div class="flash" id="flashBox"></div></div>
+
+<script src="firebase-config.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { initializeFirestore, doc as fDoc, collection as fCollection, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+(function(){
+"use strict";
+
+/* ---------- Static scenario (public) ---------- */
+var REGIONS=[
+  {id:"north",name:"North (Doru)",threat:"High",pop:"620,000",d:"M60 22 L300 14 L338 92 L214 112 L94 102 L48 62 Z",lx:190,ly:60,
+   facts:[["Key issue","NLF-R splinter group, about 600 fighters, controls illegal gold sites"],["Risks","Convoy ambushes, forced labour in mines, attacks on returnees"],["State presence","Two army companies; police stations abandoned in 4 of 9 towns"]]},
+  {id:"west",name:"West (Lerin)",threat:"Medium",pop:"410,000",d:"M48 62 L94 102 L112 192 L42 224 L18 132 Z",lx:66,ly:140,
+   facts:[["Key issue","2,100 former combatants in cantonment; payments 3 months late"],["Risks","Riots in sites, re-recruitment by NLF-R, banditry on Lerin road"],["State presence","DDR commission office; weak policing"]]},
+  {id:"halden",name:"Centre (Halden)",threat:"Medium",pop:"1.4 million",d:"M94 102 L214 112 L232 182 L112 192 Z",lx:162,ly:146,
+   facts:[["Key issue","Capital; political tension before elections, cost-of-living protests"],["Risks","Unrest, excessive force by police, attacks on journalists"],["State presence","Government, electoral commission, police HQ, UNMISA HQ"]]},
+  {id:"east",name:"East (Ebba)",threat:"High",pop:"530,000 incl. 48,000 IDPs",d:"M214 112 L338 92 L388 172 L346 252 L232 182 Z",lx:300,ly:150,
+   facts:[["Key issue","Three IDP sites; Aru–Tamboli intercommunal clashes"],["Risks","Attacks on IDP sites, sexual violence, cross-border arms flows"],["State presence","Army battalion with abuse allegations; police distrusted"]]},
+  {id:"south",name:"South (Corran)",threat:"Low",pop:"780,000",d:"M112 192 L232 182 L346 252 L254 292 L122 284 L42 224 Z",lx:200,ly:240,
+   facts:[["Key issue","Main port, sole fuel import point, UNMISA logistics hub"],["Risks","Port strikes, fuel theft, organized crime"],["State presence","Strongest police and customs presence in the country"]]}
+];
+var SITES=[{n:"Halden",x:166,y:166,cap:1},{n:"Doru",x:232,y:42},{n:"Lerin",x:56,y:176},{n:"Ebba",x:332,y:176},{n:"Corran",x:200,y:276}];
+var ASSETS=[
+  {id:"inf",name:"Infantry bn",owner:"Force",avail:5},{id:"qrf",name:"QRF coy",owner:"Force",avail:1},
+  {id:"fpu",name:"FPU",owner:"Police",avail:6},{id:"ipo",name:"IPO team",owner:"Police",avail:12},
+  {id:"ca",name:"Civil Affairs tm",owner:"Civilian",avail:5},{id:"hr",name:"Human Rights tm",owner:"Civilian",avail:4},
+  {id:"el",name:"Electoral tm",owner:"Civilian",avail:4},{id:"helo",name:"Helicopter",owner:"Support",avail:3}
+];
+var ASSESS=[
+  {id:"a_threats",label:"Top three threats to civilians",hint:"Who is at risk, from whom, and where.",max:600},
+  {id:"a_actors",label:"Key actors and what they want",hint:"Government, army, police, NLF-R, Sarevia Forward, communities, Malvane.",max:600},
+  {id:"a_prior",label:"Mission priorities for the next 90 days",hint:"No more than three, in order.",max:400},
+  {id:"a_seams",label:"Biggest coordination risk between components",hint:"Where Force, Police and civilian work could pull in different directions.",max:400}
+];
+var PLANF=[
+  {id:"p_poc",label:"Protection of civilians",hint:"Where you concentrate, and how you prevent rather than only respond.",max:400},
+  {id:"p_pol",label:"Political process and elections",hint:"Good offices, DDR, electoral support.",max:400},
+  {id:"p_rol",label:"Rule of law and security sector reform",hint:"Colocation, mentoring, accountability.",max:400},
+  {id:"p_sup",label:"Mission support",hint:"Logistics, fuel, air assets, accommodation.",max:300}
+];
+var DECF=[
+  {id:"d_bluf",label:"Bottom line up front",hint:"One or two sentences: the situation and your recommendation.",max:300},
+  {id:"d_dec",label:"Three decisions you need from the SRSG",hint:"Phrase each so it can be answered yes or no.",max:500},
+  {id:"d_risk",label:"Top risks and mitigations",hint:"Include the risk of what you have chosen not to do.",max:500},
+  {id:"d_change",label:"What changed since your original plan, and why",hint:"Tie each change to a message you received.",max:500}
+];
+var STAGES=[{id:"situation",label:"Situation",from:0},{id:"assess",label:"Assessment",from:0.12},{id:"plan",label:"Integrated plan",from:0.25},{id:"messages",label:"Messages",from:0.40},{id:"decision",label:"Decision brief",from:0.80}];
+var PRECS=["FLASH","IMMEDIATE","PRIORITY","ROUTINE"];
+function precClass(p){return p==="FLASH"?"":p==="IMMEDIATE"?"amber":"blue";}
+
+/* ---------- Helpers ---------- */
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];});}
+function fmt(ms){var neg=ms<0;ms=Math.abs(ms);var m=Math.floor(ms/60000),s=Math.floor(ms%60000/1000);return (neg?"−":"")+m+":"+(s<10?"0":"")+s;}
+function clone(o){return JSON.parse(JSON.stringify(o));}
+function paras(t){return String(t||"").split(/\n\s*\n/).map(function(p){return p.trim();}).filter(Boolean);}
+function setStatus(t,alert){var s=$("status");s.textContent=t;s.classList.toggle("alert",!!alert);}
+function newId(){return "m"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+
+/* ---------- State ---------- */
+var db=null,uid=null,isFac=false,canSave=true,AUTH=null,AUTHUSER=null;
+var LIVE=null;            // live/state: clock + sent messages (all viewers read)
+var CFG=null,DRAFT=null,dirty=false; // fac/config (facilitators only)
+var TEAMS=[];             // teams/* (facilitators only)
+var ME={teamName:"",answers:{},coa:{},alloc:blankAlloc(),acks:[]};
+var LOCAL_KEY="sarevia-live-v2";
+function blankAlloc(){var a={};REGIONS.forEach(function(r){a[r.id]={};ASSETS.forEach(function(x){a[r.id][x.id]=0;});});return a;}
+function loadLocal(){try{var r=localStorage.getItem(LOCAL_KEY);if(r){var o=JSON.parse(r);if(o&&o.alloc)ME=Object.assign(ME,o);}}catch(e){}}
+function saveLocal(){try{localStorage.setItem(LOCAL_KEY,JSON.stringify(ME));}catch(e){}}
+
+function liveDefaults(){return {status:"idle",duration:75,extra:0,startedAt:0,elapsedBefore:0,sent:[]};}
+function L(){return LIVE||liveDefaults();}
+function elapsed(){var l=L();return (l.elapsedBefore||0)+(l.status==="running"?Math.max(0,Date.now()-l.startedAt):0);}
+function frac(){return Math.min(1,elapsed()/(L().duration*60000));}
+
+/* ---------- Saving the team's work ---------- */
+var saveTimer=null,saving=false,again=false;
+function changed(){saveLocal();if(!db||!uid||!canSave)return;clearTimeout(saveTimer);saveTimer=setTimeout(pushTeam,2000);}
+function pushTeam(){
+  if(saving){again=true;return;}
+  saving=true;
+  var body=clone(ME);body.updatedAt=Date.now();
+  db.doc("teams/"+uid).set(body).then(function(){
+    saving=false;if(again){again=false;pushTeam();}
+  },function(e){
+    saving=false;
+    canSave=false;setStatus("Your answers couldn’t be saved online and are kept on this device only. Reload the page; if this continues, tell the facilitator.",true);
+  });
+}
+
+/* ---------- Navigation ---------- */
+var VIEWS=["situation","assess","plan","messages","decision","facilitator"],current="situation";
+function show(id){
+  if(VIEWS.indexOf(id)<0||(id==="facilitator"&&!isFac))id="situation";
+  current=id;
+  VIEWS.forEach(function(v){$("v-"+v).classList.toggle("on",v===id);});
+  renderTrack();
+  try{if(location.hash.slice(1)!==id)history.replaceState(null,"","#"+id);}catch(e){}
+  window.scrollTo(0,0);
+}
+window.addEventListener("hashchange",function(){var h=location.hash.slice(1);if(h&&h!==current)show(h);});
+function unseenCount(){return L().sent.filter(function(m){return ME.acks.indexOf(m.id)<0;}).length;}
+function renderTrack(){
+  var f=frac(),started=L().status!=="idle",now=0;
+  STAGES.forEach(function(s,i){if(started&&f>=s.from)now=i;});
+  var u=unseenCount();
+  var h=STAGES.map(function(s,i){
+    return '<button class="'+(s.id===current?"sel ":"")+(started&&i===now?"now":"")+'" data-go="'+s.id+'"><span class="n">'+(i+1)+'</span>'+esc(s.label)+(s.id==="messages"&&u?'<span class="dot" aria-label="'+u+' new"></span>':"")+'</button>';
+  }).join("");
+  if(isFac)h+='<button class="fac '+(current==="facilitator"?"sel":"")+'" data-go="facilitator">Facilitator</button>';
+  $("track").innerHTML=h;
+}
+$("track").addEventListener("click",function(e){var b=e.target.closest("[data-go]");if(b)show(b.getAttribute("data-go"));});
+
+/* ---------- Map ---------- */
+var selRegion="east";
+function renderMap(){
+  var fill={High:"var(--t-high)",Medium:"var(--t-med)",Low:"var(--t-low)"};
+  $("mapRegions").innerHTML=REGIONS.map(function(r){
+    return '<path class="reg'+(r.id===selRegion?" sel":"")+'" data-r="'+r.id+'" d="'+r.d+'" fill="'+fill[r.threat]+'" tabindex="0" role="button" aria-label="'+esc(r.name)+'"></path><text x="'+r.lx+'" y="'+r.ly+'" font-size="12" font-weight="600" text-anchor="middle">'+esc(r.name.split(" (")[0])+'</text>';
+  }).join("");
+  $("mapSites").innerHTML=SITES.map(function(s){
+    return (s.cap?'<rect x="'+(s.x-5)+'" y="'+(s.y-5)+'" width="10" height="10" fill="var(--un)" transform="rotate(45 '+s.x+' '+s.y+')"/>':'<circle cx="'+s.x+'" cy="'+s.y+'" r="4.5" fill="var(--ink)"/>')+'<text x="'+(s.x+9)+'" y="'+(s.y+4)+'" font-size="11">'+esc(s.n)+'</text>';
+  }).join("");
+  var r=REGIONS.filter(function(x){return x.id===selRegion;})[0];
+  $("regionCard").innerHTML='<h3>'+esc(r.name)+'<span class="tag '+r.threat+'">'+r.threat+' threat</span></h3><dl class="facts"><dt>Population</dt><dd>'+esc(r.pop)+'</dd>'+r.facts.map(function(f){return '<dt>'+esc(f[0])+'</dt><dd>'+esc(f[1])+'</dd>';}).join("")+'</dl>';
+}
+function pickRegion(e){var p=e.target.closest("[data-r]");if(p){selRegion=p.getAttribute("data-r");renderMap();}}
+$("mapRegions").addEventListener("click",pickRegion);
+$("mapRegions").addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();pickRegion(e);}});
+
+/* ---------- Participant fields ---------- */
+function renderFields(host,list){
+  $(host).innerHTML=list.map(function(f){var v=ME.answers[f.id]||"";
+    return '<div class="field"><label for="'+f.id+'">'+esc(f.label)+'</label><span class="hint">'+esc(f.hint)+'</span><textarea class="ans" id="'+f.id+'" data-max="'+f.max+'">'+esc(v)+'</textarea><div class="count" id="'+f.id+'_c">'+v.length+' / '+f.max+'</div></div>';
+  }).join("");
+}
+document.addEventListener("input",function(e){
+  var t=e.target;
+  if(t.classList.contains("ans")){
+    ME.answers[t.id]=t.value;changed();
+    var c=$(t.id+"_c");if(c){c.textContent=t.value.length+" / "+t.dataset.max;c.classList.toggle("over",t.value.length>+t.dataset.max);}
+  } else if(t.classList.contains("cell")){
+    var n=parseInt(t.value,10);ME.alloc[t.dataset.r][t.dataset.a]=isNaN(n)||n<0?0:n;changed();updateTotals();
+  } else if(t.id==="teamName"){ME.teamName=t.value;changed();}
+  else if(t.closest&&t.closest("#editor")){editorInput(t);}
+});
+
+/* ---------- Allocation ---------- */
+function renderBoard(){
+  var h='<thead><tr><th>Region</th>'+ASSETS.map(function(a){return '<th>'+esc(a.name)+'<small>'+a.owner+'</small></th>';}).join("")+'</tr></thead><tbody>';
+  REGIONS.forEach(function(r){
+    h+='<tr><td><b>'+esc(r.name)+'</b><span class="tag '+r.threat+'">'+r.threat+'</span></td>'+ASSETS.map(function(a){
+      return '<td><input class="cell" type="number" inputmode="numeric" min="0" max="20" data-r="'+r.id+'" data-a="'+a.id+'" value="'+(ME.alloc[r.id][a.id]||0)+'" aria-label="'+esc(a.name+" in "+r.name)+'"></td>';}).join("")+'</tr>';
+  });
+  h+='<tr class="tot"><td>Allocated / available</td>'+ASSETS.map(function(a){return '<td id="tot_'+a.id+'"></td>';}).join("")+'</tr></tbody>';
+  $("board").innerHTML=h;updateTotals();
+}
+function sum(alloc,aid){return REGIONS.reduce(function(t,r){return t+((alloc[r.id]||{})[aid]||0);},0);}
+function checksFor(alloc){
+  var out=[];
+  ASSETS.forEach(function(a){var s=sum(alloc,a.id);
+    if(s>a.avail)out.push(["err","Over-allocated:",a.name+" "+s+" of "+a.avail+"."]);
+    else if(s<a.avail)out.push(["warn","Unassigned:",(a.avail-s)+" "+a.name+" not yet allocated."]);});
+  REGIONS.forEach(function(r){var x=alloc[r.id]||{};if(r.threat==="High"&&(x.inf||0)+(x.qrf||0)===0)out.push(["warn","Protection gap:",r.name+" is high threat with no military presence."]);});
+  if(((alloc.east||{}).hr||0)===0)out.push(["warn","Monitoring gap:","No Human Rights team in the East, where displaced people are most exposed."]);
+  if(!out.length)out.push(["ok","Plan check passed:","All assets allocated and no gaps flagged."]);
+  return out;
+}
+function updateTotals(){
+  ASSETS.forEach(function(a){var c=$("tot_"+a.id);if(!c)return;var s=sum(ME.alloc,a.id);c.textContent=s+" / "+a.avail;c.className=s>a.avail?"bad":(s===a.avail?"good":"");});
+  $("checks").innerHTML=checksFor(ME.alloc).map(function(o){return '<li class="'+o[0]+'"><b>'+esc(o[1])+'</b>'+esc(o[2])+'</li>';}).join("");
+}
+
+/* ---------- Messages (participant side) ---------- */
+function headHtml(m,n,total){
+  return '<dl class="msg-head"><dt>Precedence</dt><dd><span class="prec '+precClass(m.prec)+'">'+esc(m.prec)+'</span></dd><dt>From</dt><dd>'+esc(m.from||"UNMISA")+'</dd><dt>To</dt><dd>UNMISA Integrated Planning Team</dd><dt>Serial</dt><dd>Message '+n+'</dd></dl>';
+}
+function bodyHtml(m){return '<div class="msg-body">'+paras(m.body).map(function(p){return "<p>"+esc(p)+"</p>";}).join("")+'</div>';}
+function renderMessages(){
+  var sent=L().sent;
+  if(!sent.length){$("msgList").innerHTML='<div class="empty">No messages yet. They will arrive here while you plan.</div>';return;}
+  var html="";
+  for(var i=sent.length-1;i>=0;i--){
+    var m=sent[i],opts=(m.options||[]).filter(Boolean),pick=ME.coa[m.id],why=ME.answers["why_"+m.id]||"";
+    html+='<article class="msg"><h2 style="margin:16px 18px 0">'+esc(m.title)+'</h2>'+headHtml(m,i+1)+bodyHtml(m)+'<div class="msg-task">'+(m.question?'<h3>'+esc(m.question)+'</h3>':"")+
+      opts.map(function(o,j){return '<label class="coa"><input type="radio" name="coa_'+m.id+'" data-m="'+m.id+'" value="'+j+'"'+(pick===j?" checked":"")+'><b>Option '+String.fromCharCode(65+j)+'.</b> '+esc(o)+'</label>';}).join("")+
+      '<div class="field" style="margin-top:12px"><label for="why_'+m.id+'">'+(opts.length?"Justification and changes to your plan":"Your response")+'</label><textarea class="ans" id="why_'+m.id+'" data-max="600">'+esc(why)+'</textarea><div class="count" id="why_'+m.id+'_c">'+why.length+' / 600</div></div>'+
+      '<button class="btn" data-go-plan>Update allocation</button></div></article>';
+  }
+  $("msgList").innerHTML=html;
+}
+$("msgList").addEventListener("change",function(e){var t=e.target;if(t.type==="radio"){ME.coa[t.dataset.m]=+t.value;changed();}});
+$("msgList").addEventListener("click",function(e){if(e.target.closest("[data-go-plan]"))show("plan");});
+
+var queue=[],showing=null;
+function checkNew(){
+  L().sent.forEach(function(m){if(ME.acks.indexOf(m.id)<0&&queue.indexOf(m.id)<0&&showing!==m.id)queue.push(m.id);});
+  queue=queue.filter(function(id){return L().sent.some(function(m){return m.id===id;});});
+  if(!showing)nextFlash();
+}
+function nextFlash(){
+  var id=queue.shift();if(!id){showing=null;$("overlay").classList.remove("on");return;}
+  var idx=-1;L().sent.forEach(function(m,i){if(m.id===id)idx=i;});if(idx<0){nextFlash();return;}
+  var m=L().sent[idx];showing=id;
+  var box=$("flashBox");box.className="flash "+precClass(m.prec);
+  box.innerHTML='<div class="flash-strip">'+esc(m.prec)+' message received</div><h2 id="flashTitle">'+esc(m.title)+'</h2>'+headHtml(m,idx+1)+bodyHtml(m)+'<div class="flash-actions"><button class="btn primary" id="ackGo">Acknowledge and respond</button><button class="btn" id="ackLater">Acknowledge</button></div>';
+  $("overlay").classList.add("on");
+  setTimeout(function(){var b=$("ackGo");if(b)b.focus();},50);
+}
+$("overlay").addEventListener("click",function(e){
+  if(e.target.id!=="ackGo"&&e.target.id!=="ackLater")return;
+  if(showing&&ME.acks.indexOf(showing)<0){ME.acks.push(showing);changed();}
+  var go=e.target.id==="ackGo";showing=null;
+  if(queue.length)nextFlash();else{$("overlay").classList.remove("on");if(go)show("messages");else renderTrack();}
+});
+
+/* ---------- Clock ---------- */
+function tick(){
+  var l=L(),t=$("time");
+  if(!LIVE||l.status==="idle"){t.textContent=fmt((l.duration+l.extra)*60000);t.className="time idle";}
+  else{var rem=(l.duration+l.extra)*60000-elapsed();t.textContent=fmt(rem);t.className="time"+(rem<0?" over":rem<10*60000?" warn":"");}
+  if(isFac){
+    var b=$("startBtn");b.hidden=false;
+    b.textContent=l.status==="idle"?"Start exercise":l.status==="running"?"Pause":"Resume";
+    b.classList.toggle("primary",l.status!=="running");
+    autoSend();
+  }
+}
+var lastStage=-1;
+setInterval(function(){tick();var f=frac(),st=0;STAGES.forEach(function(s,i){if(f>=s.from)st=i;});if(st!==lastStage){lastStage=st;renderTrack();}},1000);
+
+/* ---------- Live state writes (facilitator) ---------- */
+var liveChain=Promise.resolve();
+function writeLive(patch){
+  liveChain=liveChain.then(function(){
+    var ref=db.doc("live/state");
+    return ref.get().then(function(s){
+      if(s.exists)return ref.update(patch);
+      return ref.set(Object.assign(liveDefaults(),patch));
+    });
+  }).catch(function(){setStatus("Couldn’t update the exercise. Check your connection and try again.",true);});
+  return liveChain;
+}
+$("startBtn").addEventListener("click",function(){
+  var l=L();
+  if(l.status==="running")writeLive({status:"paused",elapsedBefore:elapsed(),startedAt:0});
+  else writeLive({status:"running",startedAt:Date.now()});
+});
+
+/* ---------- Facilitator: config editor ---------- */
+var pendingSend={};
+function sentIds(){return L().sent.map(function(m){return m.sourceId;});}
+function sendMessage(src){
+  if(pendingSend[src.id]||sentIds().indexOf(src.id)>=0)return;
+  pendingSend[src.id]=1;
+  var entry={id:newId(),sourceId:src.id,title:src.title||"Message",prec:src.prec||"FLASH",from:src.from||"",body:src.body||"",question:src.question||"",
+    options:String(src.options||"").split("\n").map(function(x){return x.trim();}).filter(Boolean),sentAtMin:Math.round(elapsed()/60000)};
+  var sent=L().sent.slice();sent.push(entry);
+  writeLive({sent:sent}).then(function(){delete pendingSend[src.id];});
+}
+function autoSend(){
+  if(!CFG||L().status!=="running")return;
+  var mins=elapsed()/60000;
+  (CFG.messages||[]).forEach(function(m){
+    if(m.sendAt!==""&&m.sendAt!=null&&!isNaN(+m.sendAt)&&mins>=+m.sendAt)sendMessage(m);
+  });
+}
+function renderEditor(){
+  if(!DRAFT){$("editor").innerHTML='<div class="empty">Loading messages…</div>';return;}
+  var ms=DRAFT.messages||[];
+  if(!ms.length){$("editor").innerHTML='<div class="empty">No messages yet. Add one to get started.</div>';}
+  else{
+    var sids=sentIds(),mins=elapsed()/60000;
+    var order=ms.map(function(m,i){return i;}).sort(function(a,b){var x=ms[a].sendAt,y=ms[b].sendAt;x=(x===""||x==null)?1e9:+x;y=(y===""||y==null)?1e9:+y;return x-y;});
+    $("editor").innerHTML=order.map(function(i){
+      var m=ms[i],isSent=sids.indexOf(m.id)>=0,hasT=m.sendAt!==""&&m.sendAt!=null;
+      var pill=isSent?'<span class="pill sent">Sent</span>':hasT?'<span class="pill'+(L().status!=="idle"&&mins>=+m.sendAt-2?" due":"")+'">At minute '+esc(m.sendAt)+'</span>':'<span class="pill">Manual</span>';
+      var sel=PRECS.map(function(p){return '<option'+(m.prec===p?" selected":"")+'>'+p+'</option>';}).join("");
+      return '<div class="ed'+(isSent?" sent":"")+'" data-i="'+i+'"><div class="ed-top"><b>'+esc(m.title||"Untitled message")+'</b>'+pill+
+        '<button class="btn sm primary" data-send="'+i+'"'+(isSent?" disabled":"")+'>'+(isSent?"Sent":"Send now")+'</button><button class="btn sm danger" data-del="'+i+'">Delete</button></div>'+
+        '<div class="ed-grid"><div class="field"><label>Title</label><input type="text" data-k="title" value="'+esc(m.title)+'"></div>'+
+        '<div class="field"><label>From</label><input type="text" data-k="from" value="'+esc(m.from)+'"></div>'+
+        '<div class="field"><label>Precedence</label><select data-k="prec">'+sel+'</select></div>'+
+        '<div class="field"><label>Send at minute</label><input type="number" min="0" max="300" data-k="sendAt" value="'+esc(m.sendAt)+'"></div></div>'+
+        '<div class="field"><label>Message text</label><textarea data-k="body" rows="5">'+esc(m.body)+'</textarea><span class="hint">Leave a blank line between paragraphs.</span></div>'+
+        '<div class="field"><label>Question for teams</label><input type="text" data-k="question" value="'+esc(m.question)+'"></div>'+
+        '<div class="field"><label>Options, one per line</label><textarea data-k="options" rows="3">'+esc(m.options)+'</textarea></div>'+
+        '<div class="field"><label>Facilitator notes (hidden from teams)</label><textarea data-k="notes" rows="3">'+esc(m.notes)+'</textarea></div></div>';
+    }).join("");
+  }
+  renderSaveBar();
+}
+function editorInput(t){
+  var card=t.closest(".ed");if(!card||!t.dataset.k)return;
+  DRAFT.messages[+card.dataset.i][t.dataset.k]=t.value;
+  if(t.dataset.k==="title")card.querySelector(".ed-top b").textContent=t.value||"Untitled message";
+  dirty=true;renderSaveBar();
+}
+$("editor").addEventListener("change",function(e){if(e.target.tagName==="SELECT")editorInput(e.target);});
+$("editor").addEventListener("click",function(e){
+  var s=e.target.closest("[data-send]"),d=e.target.closest("[data-del]");
+  if(s){var m=DRAFT.messages[+s.dataset.send];if(!m.body.trim()){alert("Add message text before sending.");return;}
+    if(confirm("Send “"+(m.title||"this message")+"” to all teams now?")){sendMessage(m);if(dirty)saveCfg();}}
+  if(d){var i=+d.dataset.del;if(confirm("Delete this message? Teams that already received it keep it.")){DRAFT.messages.splice(i,1);dirty=true;renderEditor();}}
+});
+$("addMsg").addEventListener("click",function(){
+  if(!DRAFT)DRAFT={messages:[]};
+  DRAFT.messages.push({id:newId(),title:"",from:"JOC UNMISA",prec:"FLASH",sendAt:"",body:"",question:"",options:"",notes:""});
+  dirty=true;renderEditor();
+  var cards=$("editor").querySelectorAll(".ed");var last=null;cards.forEach(function(c){if(+c.dataset.i===DRAFT.messages.length-1)last=c;});
+  if(last){last.scrollIntoView({block:"center"});var inp=last.querySelector("input");if(inp)inp.focus();}
+});
+function renderSaveBar(){$("saveBar").classList.toggle("dirty",dirty);$("saveState").textContent=dirty?"Unsaved changes: scheduled times use the saved version":"All changes saved";$("saveCfg").disabled=!dirty;}
+function saveCfg(){
+  var body=clone(DRAFT);body.updatedAt=Date.now();
+  $("saveCfg").disabled=true;
+  return db.doc("fac/config").set(body).then(function(){dirty=false;renderSaveBar();},function(){$("saveState").textContent="Couldn’t save. Try again.";$("saveCfg").disabled=false;});
+}
+$("saveCfg").addEventListener("click",saveCfg);
+window.addEventListener("beforeunload",function(e){if(dirty){e.preventDefault();e.returnValue="";}});
+
+function renderDur(){
+  $("durSeg").innerHTML=[60,75,90].map(function(d){return '<button data-dur="'+d+'" class="'+(L().duration===d?"on":"")+'">'+d+' min</button>';}).join("");
+}
+$("durSeg").addEventListener("click",function(e){var b=e.target.closest("[data-dur]");if(b)writeLive({duration:+b.dataset.dur});});
+$("addTime").addEventListener("click",function(){writeLive({extra:(L().extra||0)+5});});
+$("resetBtn").addEventListener("click",function(){
+  if(!confirm("Reset the exercise for everyone? The clock stops and all sent messages are withdrawn."))return;
+  writeLive({status:"idle",startedAt:0,elapsedBefore:0,extra:0,sent:[]});
+});
+
+/* ---------- Facilitator: teams ---------- */
+var profiles={};
+function renderTeams(){
+  if(!TEAMS.length){$("teams").innerHTML='<div class="empty">No team has saved anything yet.</div>';return;}
+  var sent=L().sent;
+  var h='<div class="teams-wrap"><table class="teams"><thead><tr><th>Team</th><th class="c">Assessment</th><th class="c">Plan</th>'+
+    sent.map(function(m,i){return '<th class="c" title="'+esc(m.title)+'">Msg '+(i+1)+'</th>';}).join("")+'<th class="c">Brief</th><th>Last update</th></tr></thead><tbody>';
+  TEAMS.forEach(function(t){
+    var d=t.data,a=d.answers||{},p=profiles[t.id];
+    var filled=function(list){return list.filter(function(f){return (a[f.id]||"").trim();}).length+"/"+list.length;};
+    var who=(d.teamName||"Unnamed team")+(p&&p.name?" ("+p.name+")":"");
+    h+='<tr><td><b>'+esc(who)+'</b><details class="debrief"><summary>Read full debrief</summary><pre>'+esc(debriefFor(d,who))+'</pre></details></td>'+
+      '<td class="c">'+filled(ASSESS)+'</td><td class="c">'+filled(PLANF)+'</td>'+
+      sent.map(function(m){var c=(d.coa||{})[m.id],w=(a["why_"+m.id]||"").trim();return '<td class="c">'+(c!=null?String.fromCharCode(65+c):(w?"✓":"–"))+'</td>';}).join("")+
+      '<td class="c">'+filled(DECF)+'</td><td class="small">'+(d.updatedAt?new Date(d.updatedAt).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}):"")+'</td></tr>';
+  });
+  $("teams").innerHTML=h+'</tbody></table></div>';
+}
+function debriefFor(d,who){
+  var a=d.answers||{},Lines=[];
+  Lines.push("TEAM: "+who);Lines.push("");
+  Lines.push("SITUATION ASSESSMENT");ASSESS.forEach(function(f){Lines.push("- "+f.label+": "+(a[f.id]||"(blank)"));});
+  Lines.push("");Lines.push("ALLOCATION");
+  REGIONS.forEach(function(r){var x=(d.alloc||{})[r.id]||{};Lines.push("- "+r.name+": "+ASSETS.map(function(s){return s.name+" "+(x[s.id]||0);}).join(", "));});
+  checksFor(d.alloc||blankAlloc()).forEach(function(c){Lines.push("  ! "+c[1]+" "+c[2]);});
+  Lines.push("");Lines.push("CONCEPT BY LINE OF EFFORT");PLANF.forEach(function(f){Lines.push("- "+f.label+": "+(a[f.id]||"(blank)"));});
+  Lines.push("");Lines.push("MESSAGE RESPONSES");
+  L().sent.forEach(function(m,i){var c=(d.coa||{})[m.id];
+    Lines.push("- Message "+(i+1)+" ("+m.title+")"+(m.options&&m.options.length?": Option "+(c!=null?String.fromCharCode(65+c):"none chosen"):""));
+    Lines.push("  "+(a["why_"+m.id]||"(no response)"));});
+  Lines.push("");Lines.push("DECISION BRIEF");DECF.forEach(function(f){Lines.push("- "+f.label+": "+(a[f.id]||"(blank)"));});
+  return Lines.join("\n");
+}
+$("copyAll").addEventListener("click",function(){
+  var txt=TEAMS.map(function(t){var p=profiles[t.id];return debriefFor(t.data,(t.data.teamName||"Unnamed team")+(p&&p.name?" ("+p.name+")":""));}).join("\n\n==========\n\n")||"No team answers yet.";
+  function done(){$("copyNote").textContent="Copied";setTimeout(function(){$("copyNote").textContent="";},2500);}
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(done,function(){$("copyNote").textContent="Copy failed: open each team’s debrief and select the text.";});
+  else $("copyNote").textContent="Copy isn’t available here: open each team’s debrief and select the text.";
+});
+$("clearTeams").addEventListener("click",function(){
+  if(!confirm("Delete every team’s answers? This can’t be undone."))return;
+  var ids=TEAMS.map(function(t){return t.id;});
+  ids.reduce(function(p,id){return p.then(function(){return db.doc("teams/"+id).delete();});},Promise.resolve()).catch(function(){setStatus("Some team answers couldn’t be cleared.",true);});
+});
+
+/* ---------- Live updates ---------- */
+function onLive(){
+  tick();renderTrack();renderMessages();checkNew();
+  if(isFac){renderDur();if(!$("editor").contains(document.activeElement))renderEditor();if(TEAMS.length)renderTeams();}
+  var l=L();
+  if(!isFac)setStatus(l.status==="idle"?"Waiting for the facilitator to start. Read the situation brief in the meantime.":l.status==="paused"?"The facilitator has paused the exercise.":"Exercise running. Your answers save automatically.");
+  else setStatus(l.status==="idle"?"You are the facilitator. Prepare your messages, then start the exercise.":l.status==="paused"?"Paused. Teams see the clock stopped.":"Running. Keep this page open so scheduled messages go out.");
+}
+
+/* ---------- Boot ---------- */
+function renderAll(){
+  $("teamName").value=ME.teamName||"";
+  renderMap();renderFields("assessFields",ASSESS);renderFields("planFields",PLANF);renderFields("decisionFields",DECF);renderBoard();renderMessages();tick();
+}
+loadLocal();renderAll();show(location.hash.slice(1)||"situation");
+
+/* ---------- Import / export ---------- */
+$("exportBtn").addEventListener("click",function(){
+  if(!DRAFT)return;
+  var blob=new Blob([JSON.stringify({messages:DRAFT.messages},null,2)],{type:"application/json"});
+  var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="sarevia-messages.json";document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},500);
+});
+$("importFile").addEventListener("change",function(e){
+  var f=e.target.files[0];if(!f)return;
+  f.text().then(function(t){
+    var o=JSON.parse(t),list=Array.isArray(o)?o:o.messages;
+    if(!Array.isArray(list))throw new Error("no messages");
+    var clean=list.map(function(m){return {id:newId(),title:String(m.title||""),from:String(m.from||""),prec:PRECS.indexOf(m.prec)>=0?m.prec:"FLASH",
+      sendAt:m.sendAt==null?"":String(m.sendAt),body:String(m.body||""),question:String(m.question||""),
+      options:Array.isArray(m.options)?m.options.join("\n"):String(m.options||""),notes:String(m.notes||"")};});
+    var replace=!DRAFT.messages.length||confirm("Replace your current messages with the "+clean.length+" imported ones? Choose Cancel to add them instead.");
+    DRAFT.messages=replace?clean:DRAFT.messages.concat(clean);
+    dirty=true;renderEditor();
+  }).catch(function(){alert("That file isn’t a message library. Use a .json file exported from this console.");});
+  e.target.value="";
+});
+
+/* ---------- Sign-in ---------- */
+function openLogin(){$("lgErr").textContent="";$("loginOv").classList.add("on");setTimeout(function(){$("lgEmail").focus();},50);}
+$("lgCancel").addEventListener("click",function(){$("loginOv").classList.remove("on");});
+$("facBtn").addEventListener("click",function(){
+  if(AUTHUSER&&!AUTHUSER.isAnonymous){
+    if(dirty&&!confirm("You have unsaved message changes. Sign out anyway?"))return;
+    dirty=false;signOut(AUTH).then(function(){location.reload();});
+  } else openLogin();
+});
+$("loginForm").addEventListener("submit",function(e){
+  e.preventDefault();$("lgGo").disabled=true;$("lgErr").textContent="";
+  signInWithEmailAndPassword(AUTH,$("lgEmail").value.trim(),$("lgPass").value).then(function(){location.reload();},function(err){
+    $("lgGo").disabled=false;
+    $("lgErr").textContent=(err&&(err.code==="auth/invalid-credential"||err.code==="auth/wrong-password"||err.code==="auth/user-not-found"))?"Email or password is incorrect.":"Sign-in failed. Check your connection and try again.";
+  });
+});
+
+/* ---------- Firebase adapter ---------- */
+function makeDb(fs){
+  function wrap(s){return {id:s.id,exists:s.exists(),data:function(){return s.data();}};}
+  return {
+    doc:function(path){var r=fDoc(fs,path);return {
+      get:function(){return getDoc(r).then(wrap);},
+      set:function(d){return setDoc(r,d);},
+      update:function(d){return updateDoc(r,d);},
+      delete:function(){return deleteDoc(r);},
+      onSnapshot:function(n,e){return onSnapshot(r,function(s){n(wrap(s));},e);}
+    };},
+    collection:function(path){var c=fCollection(fs,path);return {
+      onSnapshot:function(n,e){return onSnapshot(c,function(q){n({docs:q.docs.map(wrap)});},e);}
+    };}
+  };
+}
+
+/* ---------- Boot ---------- */
+var booted=false;
+(function(){
+  var C=window.FIREBASE_CONFIG;
+  if(!C||!C.apiKey||/PASTE/.test(C.apiKey)){setStatus("Setup needed: add your Firebase project settings to firebase-config.js. See the README.",true);return;}
+  var app=initializeApp(C);
+  AUTH=getAuth(app);
+  var fs=initializeFirestore(app,{ignoreUndefinedProperties:true});
+  db=makeDb(fs);
+  onAuthStateChanged(AUTH,async function(u){
+    if(!u){signInAnonymously(AUTH).catch(function(){setStatus("Couldn’t connect. In Firebase, turn on Anonymous sign-in (see the README), then reload.",true);});return;}
+    if(booted)return;booted=true;
+    AUTHUSER=u;uid=u.uid;
+    $("facBtn").hidden=false;
+    if(!u.isAnonymous){
+      $("facBtn").textContent="Sign out ("+u.email+")";
+      try{await getDoc(fDoc(fs,"fac/config"));isFac=true;$("whoLine").textContent="Facilitator view · fictional scenario";}
+      catch(e){isFac=false;}
+    }
+    try{var mine=await db.doc("teams/"+uid).get();
+      if(mine.exists){var d=clone(mine.data());if(!d.alloc)d.alloc=blankAlloc();ME=Object.assign({teamName:"",answers:{},coa:{},acks:[]},d);delete ME.updatedAt;saveLocal();renderAll();}
+    }catch(e){}
+    db.doc("live/state").onSnapshot(function(s){LIVE=s.exists?s.data():null;onLive();},function(){setStatus("Lost the live connection. Reload the page.",true);});
+    if(isFac){
+      db.doc("fac/config").onSnapshot(function(s){
+        CFG=s.exists?s.data():{messages:[]};
+        if(!dirty){DRAFT=clone(CFG);delete DRAFT.updatedAt;if(!DRAFT.messages)DRAFT.messages=[];renderEditor();}
+      });
+      db.collection("teams").onSnapshot(function(q){TEAMS=q.docs.map(function(d){return {id:d.id,data:d.data()};});renderTeams();});
+      renderDur();
+    }
+    renderTrack();onLive();
+    if(!u.isAnonymous&&!isFac)setStatus("You’re signed in as "+u.email+", but this account isn’t a facilitator. Add it to the Firestore rules (see the README).",true);
+  });
+})();
+})();
+</script>
+</body>
+</html>
